@@ -23,6 +23,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
 **/
 
+using System.Collections.Generic;
+
 namespace Microsoft.Alm.Authentication
 {
     public interface ICredentialStore
@@ -30,7 +32,7 @@ namespace Microsoft.Alm.Authentication
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Namespace")]
         string Namespace { get; }
 
-        Secret.UriNameConversion UriNameConversion { get; }
+        IList<Secret.UriNameConversion> UriNameConversions { get; }
 
         void DeleteCredentials(TargetUri targetUri);
 

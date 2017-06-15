@@ -24,6 +24,7 @@
 **/
 
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Microsoft.Alm.Authentication
@@ -35,17 +36,24 @@ namespace Microsoft.Alm.Authentication
 
         private static readonly Dictionary<string, Secret> _cache = new Dictionary<string, Secret>(KeyComparer);
 
-        public SecretCache(string @namespace, Secret.UriNameConversion getTargetName)
+        public SecretCache(string @namespace, Secret.UriNameConversion getTargetName) :
+            this(@namespace, new List<Secret.UriNameConversion>() { getTargetName })
+        {
+
+        }
+
+        public SecretCache(string @namespace, IList<Secret.UriNameConversion> getTargetNames)
         {
             if (String.IsNullOrWhiteSpace(@namespace))
                 throw new ArgumentNullException(@namespace);
 
             _namespace = @namespace;
-            _getTargetName = getTargetName ?? Secret.UriToName;
+
+            _getTargetNames = getTargetNames ?? new List<Secret.UriNameConversion>() { Secret.UriToName };
         }
 
         public SecretCache(string @namespace)
-            : this(@namespace, null)
+            : this(@namespace, null as List<Secret.UriNameConversion>)
         { }
 
         internal SecretCache(ICredentialStore credentialStore)
@@ -54,7 +62,7 @@ namespace Microsoft.Alm.Authentication
                 throw new ArgumentNullException(nameof(credentialStore));
 
             _namespace = credentialStore.Namespace;
-            _getTargetName = credentialStore.UriNameConversion;
+            _getTargetNames = credentialStore.UriNameConversions;
         }
 
         public string Namespace
@@ -62,13 +70,13 @@ namespace Microsoft.Alm.Authentication
             get { return _namespace; }
         }
 
-        public Secret.UriNameConversion UriNameConversion
+        public IList<Secret.UriNameConversion> UriNameConversions
         {
-            get { return _getTargetName; }
+            get { return _getTargetNames; }
         }
 
         private readonly string _namespace;
-        private readonly Secret.UriNameConversion _getTargetName;
+        private readonly IList<Secret.UriNameConversion> _getTargetNames;
 
         /// <summary>
         /// Deletes a credential from the cache.
@@ -78,13 +86,17 @@ namespace Microsoft.Alm.Authentication
         {
             BaseSecureStore.ValidateTargetUri(targetUri);
 
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName) && _cache[targetName] is Credential)
+                foreach (var targetName in targetNames)
                 {
-                    _cache.Remove(targetName);
+                    // remove all instances
+                    if (_cache.ContainsKey(targetName) && _cache[targetName] is Credential)
+                    {
+                        _cache.Remove(targetName);
+                    }
                 }
             }
         }
@@ -97,13 +109,17 @@ namespace Microsoft.Alm.Authentication
         {
             BaseSecureStore.ValidateTargetUri(targetUri);
 
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName) && _cache[targetName] is Token)
+                foreach (var targetName in targetNames)
                 {
-                    _cache.Remove(targetName);
+                    // remove all instances
+                    if (_cache.ContainsKey(targetName) && _cache[targetName] is Token)
+                    {
+                        _cache.Remove(targetName);
+                    }
                 }
             }
         }
@@ -118,17 +134,22 @@ namespace Microsoft.Alm.Authentication
             BaseSecureStore.ValidateTargetUri(targetUri);
 
             Credential credentials = null;
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName) && _cache[targetName] is Credential)
+                foreach (var targetName in targetNames)
                 {
-                    credentials = _cache[targetName] as Credential;
-                }
-                else
-                {
-                    credentials = null;
+                    if (_cache.ContainsKey(targetName) && _cache[targetName] is Credential)
+                    {
+                        credentials = _cache[targetName] as Credential;
+                        // as soon as we find one use it
+                        break;
+                    }
+                    else
+                    {
+                        credentials = null;
+                    }
                 }
             }
 
@@ -145,17 +166,22 @@ namespace Microsoft.Alm.Authentication
             BaseSecureStore.ValidateTargetUri(targetUri);
 
             Token token = null;
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName) && _cache[targetName] is Token)
+                foreach (var targetName in targetNames)
                 {
-                    token = _cache[targetName] as Token;
-                }
-                else
-                {
-                    token = null;
+                    if (_cache.ContainsKey(targetName) && _cache[targetName] is Token)
+                    {
+                        token = _cache[targetName] as Token;
+                        // as soon as we find one use it
+                        break;
+                    }
+                    else
+                    {
+                        token = null;
+                    }
                 }
             }
 
@@ -172,17 +198,21 @@ namespace Microsoft.Alm.Authentication
             BaseSecureStore.ValidateTargetUri(targetUri);
             BaseSecureStore.ValidateCredential(credentials);
 
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName))
+                foreach (var targetName in targetNames)
                 {
-                    _cache[targetName] = credentials;
-                }
-                else
-                {
-                    _cache.Add(targetName, credentials);
+                    // write to all instances
+                    if (_cache.ContainsKey(targetName))
+                    {
+                        _cache[targetName] = credentials;
+                    }
+                    else
+                    {
+                        _cache.Add(targetName, credentials);
+                    }
                 }
             }
         }
@@ -197,17 +227,21 @@ namespace Microsoft.Alm.Authentication
             BaseSecureStore.ValidateTargetUri(targetUri);
             Token.Validate(token);
 
-            string targetName = this.GetTargetName(targetUri);
+            IList<string> targetNames = this.GetTargetNames(targetUri);
 
             lock (_cache)
             {
-                if (_cache.ContainsKey(targetName))
+                foreach (var targetName in targetNames)
                 {
-                    _cache[targetName] = token;
-                }
-                else
-                {
-                    _cache.Add(targetName, token);
+                    // write to all instances
+                    if (_cache.ContainsKey(targetName))
+                    {
+                        _cache[targetName] = token;
+                    }
+                    else
+                    {
+                        _cache.Add(targetName, token);
+                    }
                 }
             }
         }
@@ -217,11 +251,18 @@ namespace Microsoft.Alm.Authentication
         /// </summary>
         /// <param name="targetUri">Uri of the target</param>
         /// <returns>Properly formatted TargetName string</returns>
-        private string GetTargetName(TargetUri targetUri)
+        private List<string> GetTargetNames(TargetUri targetUri)
         {
             BaseSecureStore.ValidateTargetUri(targetUri);
 
-            return _getTargetName(targetUri, _namespace);
+            var names = new List<string>();
+            
+            foreach(Secret.UriNameConversion unc in _getTargetNames)
+            {
+                names.Add(unc(targetUri, _namespace));
+            }
+
+            return names;
         }
     }
 }

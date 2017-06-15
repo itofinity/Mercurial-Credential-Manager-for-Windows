@@ -64,12 +64,62 @@ namespace Microsoft.Alm.Authentication
             if (String.IsNullOrWhiteSpace(@namespace))
                 throw new ArgumentNullException(@namespace);
 
-            string targetName = $"{@namespace}:{targetUri.ActualUri.AbsoluteUri}";
+            var baseUrl = $"{targetUri.ActualUri.Scheme}://{targetUri.ActualUri.Host}{targetUri.ActualUri.AbsolutePath}";
+            string targetName = $"{@namespace}:{baseUrl}";
             targetName = targetName.TrimEnd('/', '\\');
 
             return targetName;
         }
 
+        public static string UriToMercurialKeyringNamePerHost(TargetUri targetUri, string @namespace)
+        {
+            // ignore the namespace
+            var username = targetUri.ActualUri.UserInfo;
+
+            string baseUrl = targetUri.ToString();
+            string targetName = null;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                targetName = $"@{baseUrl}";
+            }
+            else
+            {
+                targetName = $"{username}@@{baseUrl}";
+            }
+
+            targetName = targetName.TrimEnd('/', '\\');
+
+            return $"{targetName}@Mercurial";
+
+        }
+
+        public static string UriToMercurialKeyringNamePerRepository(TargetUri targetUri, string @namespace)
+        {
+            // ignore the namespace
+            var username = targetUri.ActualUri.UserInfo;
+
+            string baseUrl = targetUri.ActualUri.AbsoluteUri;
+            if(!string.IsNullOrWhiteSpace(username))
+            {
+                // clean away the username
+                baseUrl = $"{targetUri.ActualUri.Scheme}://{targetUri.ActualUri.Host}{targetUri.ActualUri.AbsolutePath}";
+            }
+
+            string targetName = null;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                targetName = $"@{baseUrl}";
+            }
+            else
+            {
+                targetName = $"{username}@@{baseUrl}";
+            }
+
+            targetName = targetName.TrimEnd('/', '\\');
+
+            return $"{targetName}@Mercurial";
+
+        }
         public delegate string UriNameConversion(TargetUri targetUri, string @namespace);
     }
 }

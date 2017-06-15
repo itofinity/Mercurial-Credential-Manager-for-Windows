@@ -42,21 +42,6 @@ namespace Microsoft.Alm.Cli
         Basic,
 
         /// <summary>
-        /// Username and password scheme using Microsoft's Live system
-        /// </summary>
-        MicrosoftAccount,
-
-        /// <summary>
-        /// Azure Directory Authentication based, including support for ADFS
-        /// </summary>
-        AzureDirectory,
-
-        /// <summary>
-        /// GitHub authentication
-        /// </summary>
-        GitHub,
-
-        /// <summary>
         /// Bitbucket authentication
         /// </summary>
         Bitbucket,

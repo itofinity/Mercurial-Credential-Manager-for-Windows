@@ -180,15 +180,6 @@ namespace Microsoft.Alm.Cli
                         Git.Trace.WriteLine($"deleting basic credentials for '{operationArguments.TargetUri}'.");
                         break;
 
-                    case AuthorityType.AzureDirectory:
-                    case AuthorityType.MicrosoftAccount:
-                        Git.Trace.WriteLine($"deleting VSTS credentials for '{operationArguments.TargetUri}'.");
-                        break;
-
-                    case AuthorityType.GitHub:
-                        Git.Trace.WriteLine($"deleting GitHub credentials for '{operationArguments.TargetUri}'.");
-                        break;
-
                     case AuthorityType.Ntlm:
                         Git.Trace.WriteLine($"deleting NTLM credentials for '{operationArguments.TargetUri}'.");
                         break;
@@ -395,15 +386,6 @@ namespace Microsoft.Alm.Cli
                     default:
                     case AuthorityType.Basic:
                         Git.Trace.WriteLine($"storing basic credentials for '{operationArguments.TargetUri}'.");
-                        break;
-
-                    case AuthorityType.AzureDirectory:
-                    case AuthorityType.MicrosoftAccount:
-                        Git.Trace.WriteLine($"storing VSTS credentials for '{operationArguments.TargetUri}'.");
-                        break;
-
-                    case AuthorityType.GitHub:
-                        Git.Trace.WriteLine($"storing GitHub credentials for '{operationArguments.TargetUri}'.");
                         break;
 
                     case AuthorityType.Ntlm:

@@ -64,7 +64,14 @@ namespace Microsoft.Alm.Authentication
             if (String.IsNullOrWhiteSpace(@namespace))
                 throw new ArgumentNullException(@namespace);
 
-            var baseUrl = $"{targetUri.ActualUri.Scheme}://{targetUri.ActualUri.Host}{targetUri.ActualUri.AbsolutePath}";
+            var username = targetUri.ActualUri.UserInfo;
+            string usernamePrefix = null;
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                usernamePrefix = $"{username}@";
+            }
+
+            var baseUrl = $"{targetUri.ActualUri.Scheme}://{usernamePrefix}{targetUri.ActualUri.Host}";
             string targetName = $"{@namespace}:{baseUrl}";
             targetName = targetName.TrimEnd('/', '\\');
 

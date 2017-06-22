@@ -41,7 +41,7 @@ namespace Microsoft.Alm.Git
 
     public sealed class Trace: ITrace, IDisposable
     {
-        public const string EnvironmentVariableKey = "GCM_TRACE";
+        public const string EnvironmentVariableKey = "HGCM_TRACE";
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private Trace()

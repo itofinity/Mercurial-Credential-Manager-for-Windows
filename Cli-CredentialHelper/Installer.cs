@@ -51,14 +51,14 @@ namespace Microsoft.Alm.Cli
             "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll",
             "Bitbucket.Authentication.dll",
             "GitHub.Authentication.exe",
-            "git-credential-manager.exe",
-            "git-askpass.exe",
+            "hg-credential-manager.exe",
+            "hg-askpass.exe",
         };
 
         private static readonly IReadOnlyList<string> DocsList = new string[]
         {
-            "git-askpass.html",
-            "git-credential-manager.html",
+            "hg-askpass.html",
+            "hg-credential-manager.html",
         };
 
         public Installer()

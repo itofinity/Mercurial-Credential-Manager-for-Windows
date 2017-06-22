@@ -36,8 +36,8 @@ namespace Microsoft.Alm.Cli
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1806:DoNotIgnoreMethodResults")]
     internal partial class Program
     {
-        public const string Title = "Git Credential Manager for Windows";
-        public const string Description = "Secure Git credential helper for Windows, by Microsoft";
+        public const string Title = "Mercurial Credential Manager for Windows";
+        public const string Description = "Secure Mercurial credential helper for Windows. Based on Git Credential Manager for Windows by Microsoft";
 
         internal const string CommandApprove = "approve";
         internal const string CommandClear = "clear";

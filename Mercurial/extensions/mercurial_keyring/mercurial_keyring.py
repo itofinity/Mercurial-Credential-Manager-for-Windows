@@ -345,18 +345,47 @@ class HTTPPasswordHandler(object):
 
         # Load from keyring.
         if actual_user:
+            # look for a user/host/repository specific password
             ui.debug(_("keyring: looking for password (user %s, url %s)\n") % (actual_user, keyring_url))
             keyring_pwd = password_store.get_http_password(keyring_url, actual_user)
             if keyring_pwd:
                 return actual_user, keyring_pwd, self.SRC_KEYRING, keyring_url
-
+            else:
+                # look for a user/host specific password
+                perUserHost_url = "%s://%s" % (parsed_url.scheme, parsed_url.host)
+                if keyring_pwd:
+                    return actual_user, keyring_pwd, self.SRC_KEYRING, perUserHost_url
         return actual_user, None, None, keyring_url
 
     @staticmethod
     def prompt_interactively(ui, user, realm, url):
         """Actual interactive prompt"""
+        gui_prompt = os.environ.get('HGCM_GUI_PROMPT')
+        if gui_prompt:
+            ui.status(_("keyring GUI: %s.\n") % (gui_prompt))
+            from subprocess import Popen, PIPE
+            proc = Popen([gui_prompt, "GET"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            parsed_url = util.url(url)
+            if user is None:
+                userprompt = ""
+            else:
+                userprompt = "username=%s\n" % (user)
+            command = "%shost=%s\nprotocol=https\npath=%s\n\n" % (userprompt, parsed_url.host, parsed_url.path)
+            ui.status(_("keyring GUI:command= %s.\n") % (command))
+            output,erroutput = proc.communicate(input=command)
+            ui.status(_("keyring GUI:output=[%s]\n") % (output))
+            import re
+            username = re.findall(r'username=(.+)', output)
+            password = re.findall(r'password=(.+)', output)
+            if username[0]:
+                user = username[0]
+            if password[0]:
+                pwd = password[0]
+            if pwd:
+                return user, pwd
+
         if not ui.interactive():
-            raise util.Abort(_('keyring: http authorization required but program used in non-interactive mode'))
+			raise util.Abort(_('keyring: http authorization required but program used in non-interactive mode'))
 
         if not user:
             ui.status(_("keyring: username not specified in hgrc (or in url). Password will not be saved.\n"))

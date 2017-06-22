@@ -17,8 +17,8 @@ namespace Microsoft.Alm.Cli
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
     partial class Program
     {
-        public const string SourceUrl = "https://github.com/Microsoft/Git-Credential-Manager-for-Windows";
-        public const string EventSource = "Git Credential Manager";
+        public const string SourceUrl = "https://github.com/mminns/Mercurial-Credential-Manager-for-Windows";
+        public const string EventSource = "Mercurial Credential Manager";
 
         internal const string ConfigAuthorityKey = "authority";
         internal const string ConfigHttpProxyKey = "httpProxy";
@@ -34,18 +34,18 @@ namespace Microsoft.Alm.Cli
         internal static readonly StringComparer ConfigKeyComparer = StringComparer.OrdinalIgnoreCase;
         internal static readonly StringComparer ConfigValueComparer = StringComparer.OrdinalIgnoreCase;
 
-        internal const string EnvironAuthorityKey = "GCM_AUTHORITY";
-        internal const string EnvironConfigNoLocalKey = "GCM_CONFIG_NOLOCAL";
-        internal const string EnvironConfigNoSystemKey = "GCM_CONFIG_NOSYSTEM";
-        internal const string EnvironHttpProxyKey = "GCM_HTTP_PROXY";
-        internal const string EnvironHttpUserAgent = "GCM_HTTP_USER_AGENT";
-        internal const string EnvironInteractiveKey = "GCM_INTERACTIVE";
-        internal const string EnvironLoginHintKey = "GCM_LOGINHINT";
-        internal const string EnvironModalPromptKey = "GCM_MODAL_PROMPT";
-        internal const string EnvironNamespaceKey = "GCM_NAMESPACE";
-        internal const string EnvironPreserveCredentialsKey = "GCM_PRESERVE_CREDS";
-        internal const string EnvironValidateKey = "GCM_VALIDATE";
-        internal const string EnvironWritelogKey = "GCM_WRITELOG";
+        internal const string EnvironAuthorityKey = "HGCM_AUTHORITY";
+        internal const string EnvironConfigNoLocalKey = "HGCM_CONFIG_NOLOCAL";
+        internal const string EnvironConfigNoSystemKey = "HGCM_CONFIG_NOSYSTEM";
+        internal const string EnvironHttpProxyKey = "HGCM_HTTP_PROXY";
+        internal const string EnvironHttpUserAgent = "HGCM_HTTP_USER_AGENT";
+        internal const string EnvironInteractiveKey = "HGCM_INTERACTIVE";
+        internal const string EnvironLoginHintKey = "HGCM_LOGINHINT";
+        internal const string EnvironModalPromptKey = "HGCM_MODAL_PROMPT";
+        internal const string EnvironNamespaceKey = "HGCM_NAMESPACE";
+        internal const string EnvironPreserveCredentialsKey = "HGCM_PRESERVE_CREDS";
+        internal const string EnvironValidateKey = "HGCM_VALIDATE";
+        internal const string EnvironWritelogKey = "HGCM_WRITELOG";
 
         internal const string EnvironConfigTraceKey = Git.Trace.EnvironmentVariableKey;
 

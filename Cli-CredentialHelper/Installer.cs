@@ -178,33 +178,10 @@ namespace Microsoft.Alm.Cli
                 // use the custom installation path if supplied
                 if (!string.IsNullOrEmpty(_customPath))
                 {
-                    //if (!Directory.Exists(_customPath))
-                    //{
-                    //    Program.LogEvent("No Hg installation found, unable to continue deployment.", EventLogEntryType.Error);
-                    //    Console.Out.WriteLine();
-                    //    Program.WriteLine($"Fatal: custom path does not exist: '{_customPath}'. {FailFace}");
-                    //    Pause();
-
-                    //    Result = ResultValue.InvalidCustomPath;
-                    //    return;
-                    //}
 
                     Console.Out.WriteLine();
                     Console.Out.WriteLine($"Deploying to custom path: '{_customPath}'.");
                     _deploymentPath = _customPath;
-
-                    //// if the custom path points to a git location then treat it properly
-                    //MercurialInstallation installation;
-                    //if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialConfiguration(_customPath, KnownMercurialDistribution.Mercurialv4, out installation))
-                    //{
-                    //    Trace.WriteLine($"   Git found: '{installation.Path}'.");
-
-                    //    // track known Git installations
-                    //    installations = new List<MercurialInstallation>();
-                    //    installations.Add(installation);
-                    //}
-
-                    Program.LogEvent($"Custom path deployed to: '{_customPath}'", EventLogEntryType.Information);
                 }
                 // since no custom installation path was supplied, use default logic
                 else
@@ -348,6 +325,7 @@ namespace Microsoft.Alm.Cli
             SetOutput(_isPassive, _isPassive && _isForced);
             try
             {
+#if !DEBUG
                 System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
                 System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
                 if (!principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
@@ -355,97 +333,58 @@ namespace Microsoft.Alm.Cli
                     RemoveElevated();
                     return;
                 }
-
+#endif
                 List<MercurialInstallation> installations = null;
 
                 // use the custom installation path if supplied
                 if (!string.IsNullOrEmpty(_customPath))
                 {
-                    if (!Directory.Exists(_customPath))
-                    {
-                        Console.Out.WriteLine();
-                        Program.WriteLine($"fatal: custom path does not exist: '{_customPath}'. U_U");
-                        Pause();
-
-                        Result = ResultValue.InvalidCustomPath;
-                        return;
-                    }
 
                     Console.Out.WriteLine();
-                    Console.Out.WriteLine($"Removing from custom path: '{_customPath}'.");
-
-                    // if the custom path points to a git location then treat it properly
-                    MercurialInstallation installation;
-                    if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallation(_customPath, KnownMercurialDistribution.Mercurialv4, out installation))
-                    {
-                        Trace.WriteLine($"Git found: '{installation.Path}'.");
-
-                        // track known Git installations
-                        installations = new List<MercurialInstallation>();
-                        installations.Add(installation);
-                    }
+                    Console.Out.WriteLine($"Remove from custom path: '{_customPath}'.");
+                    _deploymentPath = _customPath;
                 }
                 // since no custom installation path was supplied, use default logic
                 else
                 {
                     Console.Out.WriteLine();
-                    Console.Out.WriteLine("Looking for Git installation(s)...");
+                    Console.Out.WriteLine($"Remove from standard path: '{UserHgExtPath}'.");
+                    _deploymentPath = UserHgExtPath;
+                }
 
-                    if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
+                Console.Out.WriteLine("Looking for Mercurial installation(s)...");
+                if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
+                {
+                    foreach (var installation in installations)
                     {
-                        foreach (var installation in installations)
-                        {
-                            Console.Out.WriteLine($"  {installation.Path}");
-                        }
+                        Console.Out.WriteLine($"  {installation.Path}");
                     }
                 }
 
                 if (installations == null)
                 {
-                    Program.LogEvent($"Mercurial was not detected, unable to continue with removal.", EventLogEntryType.Error);
+                    Program.LogEvent("No Mercurial installation found, unable to continue.", EventLogEntryType.Error);
                     Console.Out.WriteLine();
-                    Program.WriteLine("fatal: Mercurial was not detected, unable to continue. U_U");
+                    Program.WriteLine("Fatal: Mercurial was not detected, unable to continue. {FailFace}");
                     Pause();
 
                     Result = ResultValue.MercurialNotFound;
                     return;
                 }
 
-                ConfigurationLevel types = ConfigurationLevel.Global | ConfigurationLevel.System;
+                ConfigurationLevel types = ConfigurationLevel.Global;
 
                 ConfigurationLevel updateTypes;
                 if (SetMercurialConfig(installations, MercurialConfigAction.Unset, types, out updateTypes))
                 {
-                    if ((updateTypes & ConfigurationLevel.System) == ConfigurationLevel.System)
-                    {
-                        Console.Out.WriteLine();
-                        Console.Out.WriteLine("Updated your /etc/gitconfig [git config --system]");
-                    }
-                    else
-                    {
-                        Console.Out.WriteLine();
-
-                        // updating /etc/gitconfig should not fail installation when forced
-                        if (!_isForced)
-                        {
-                            // only 'fatal' when not forced
-                            Program.Write("Fatal: ");
-
-                            Result = ResultValue.MercurialConfigSystemFailed;
-                            return;
-                        }
-
-                        Program.WriteLine("Unable to update your /etc/gitconfig correctly.");
-                    }
-
                     if ((updateTypes & ConfigurationLevel.Global) == ConfigurationLevel.Global)
                     {
-                        Console.Out.WriteLine("Updated your ~/.gitconfig [git config --global]");
+                        Console.Out.WriteLine("Updated your ~/.hgrc");
                     }
                     else
                     {
                         Console.Out.WriteLine();
-                        Program.WriteLine("Fatal: Unable to update your ~/.gitconfig correctly.");
+                        Program.WriteLine("Fatal: Unable to update your ~/.hgrc correctly.");
 
                         Result = ResultValue.MercurialConfigGlobalFailed;
                         return;
@@ -453,54 +392,13 @@ namespace Microsoft.Alm.Cli
                 }
 
                 List<string> cleanedFiles;
-                foreach (var installation in installations)
+
+                if (Directory.Exists(_deploymentPath))
                 {
                     Console.Out.WriteLine();
-                    Console.Out.WriteLine($"Removing from '{installation.Path}'.");
+                    Console.Out.WriteLine($"Removing from '{_deploymentPath}'.");
 
-                    //if (CleanFiles(installation.Libexec, FileList, out cleanedFiles))
-                    //{
-                    //    int cleanedCount = cleanedFiles.Count;
-
-                    //    foreach (var file in cleanedFiles)
-                    //    {
-                    //        Console.Out.WriteLine($"  {file}");
-                    //    }
-
-                    //    // clean help documents
-                    //    if (Directory.Exists(installation.Doc)
-                    //        && CleanFiles(installation.Doc, DocsList, out cleanedFiles))
-                    //    {
-                    //        cleanedCount += cleanedFiles.Count;
-
-                    //        foreach (var file in cleanedFiles)
-                    //        {
-                    //            Console.Out.WriteLine($"  {file}");
-                    //        }
-                    //    }
-
-                    //    Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
-                    //}
-                    //else if (_isForced)
-                    //{
-                    //    Console.Error.WriteLine($"  removal failed. {FailFace}");
-                    //}
-                    //else
-                    //{
-                    //    Console.Error.WriteLine($"  removal failed. {FailFace}");
-                    //    Pause();
-
-                    //    Result = ResultValue.RemovalFailed;
-                    //    return;
-                    //}
-                }
-
-                if (Directory.Exists(UserHgExtPath))
-                {
-                    Console.Out.WriteLine();
-                    Console.Out.WriteLine($"Removing from '{UserHgExtPath}'.");
-
-                    if (CleanFiles(UserHgExtPath, FileList, out cleanedFiles))
+                    if (CleanFiles(_deploymentPath, FileList, out cleanedFiles))
                     {
                         int cleanedCount = cleanedFiles.Count;
 
@@ -509,7 +407,7 @@ namespace Microsoft.Alm.Cli
                             Console.Out.WriteLine($"  {file}");
                         }
 
-                        if (CleanFiles(UserHgExtPath, DocsList, out cleanedFiles))
+                        if (CleanFiles(_deploymentPath, DocsList, out cleanedFiles))
                         {
                             cleanedCount += cleanedFiles.Count;
 
@@ -534,31 +432,6 @@ namespace Microsoft.Alm.Cli
                         return;
                     }
                 }
-
-                //if (CygwinPath != null && Directory.Exists(CygwinPath))
-                //{
-                //    if (CleanFiles(CygwinPath, FileList, out cleanedFiles))
-                //    {
-                //        int cleanedCount = cleanedFiles.Count;
-
-                //        foreach (var file in cleanedFiles)
-                //        {
-                //            Console.Out.WriteLine($"  {file}");
-                //        }
-
-                //        if (CleanFiles(CygwinPath, DocsList, out cleanedFiles))
-                //        {
-                //            cleanedCount += cleanedFiles.Count;
-
-                //            foreach (var file in cleanedFiles)
-                //            {
-                //                Console.Out.WriteLine($"  {file}");
-                //            }
-                //        }
-
-                //        Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
-                //    }
-                //}
 
                 // all necessary content has been deployed to the system
                 Result = ResultValue.Success;
@@ -601,42 +474,21 @@ namespace Microsoft.Alm.Cli
 
                 var value = Path.Combine(_deploymentPath, "mercurial_credential_manager.py");
                 var entry = new Configuration.Entry(key, value);
-                if(config.TrySetEntry(ConfigurationLevel.Global, section, string.Empty, key, string.Empty, value))
+
+                if (set)
                 {
-                    updated |= ConfigurationLevel.Global;
+                    if (config.TrySetEntry(ConfigurationLevel.Global, section, string.Empty, key, string.Empty, value))
+                    {
+                        updated |= ConfigurationLevel.Global;
+                    }
                 }
-            }
-
-            if ((type & ConfigurationLevel.System) == ConfigurationLevel.System)
-            {
-                //string systemCmd = action == GitConfigAction.Set
-                //    ? "config --system credential.helper manager"
-                //    : "config --system --unset credential.helper";
-
-                //int successCount = 0;
-
-                //foreach (var installation in installations)
-                //{
-                //    if (ExecuteGit(installation.Git, systemCmd, 0, 5))
-                //    {
-                //        Trace.WriteLine("updating /etc/gitconfig succeeded.");
-
-                //        successCount++;
-                //    }
-                //    else
-                //    {
-                //        Trace.WriteLine("updating ~/.gitconfig failed.");
-                //    }
-                //}
-
-                //if (successCount == installations.Count)
-                //{
-                //    updated |= ConfigurationLevel.System;
-                //}
-                //else
-                //{
-                //    return false;
-                //}
+                else
+                {
+                    if (config.TryUnsetEntry(ConfigurationLevel.Global, section, string.Empty, key, string.Empty, value))
+                    {
+                        updated |= ConfigurationLevel.Global;
+                    }
+                }
             }
 
             return true;
@@ -663,6 +515,12 @@ namespace Microsoft.Alm.Cli
                     File.Delete(target);
 
                     cleanedFiles.Add(file);
+
+                    if (target.EndsWith(".py"))
+                    {
+                        File.Delete(target + "c");
+                        cleanedFiles.Add(file);
+                    }
                 }
 
                 return true;

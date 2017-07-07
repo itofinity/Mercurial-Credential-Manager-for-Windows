@@ -101,6 +101,9 @@ namespace Atlassian.Bitbucket.Alm.Mercurial
         public virtual bool TrySetEntry(ConfigurationLevel level, string section, string prefix, string key, string suffix, string value, string localDirectory = null)
              => throw new NotImplementedException();
 
+        public virtual bool TryUnsetEntry(ConfigurationLevel level, string section, string prefix, string key, string suffix, string value, string localDirectory = null)
+             => throw new NotImplementedException();
+
         public virtual bool TryGetEntry(string compositeKey, out Entry entry)
              => throw new NotImplementedException();
 
@@ -316,6 +319,12 @@ namespace Atlassian.Bitbucket.Alm.Mercurial
                 return true;
             }
 
+            public sealed override bool TryUnsetEntry(ConfigurationLevel level, string section, string prefix, string key, string suffix, string value, string localDirectory = null)
+            {
+                CleanMercurialConfiguration(level, new Entry(key, value), localDirectory);
+                return true;
+            }
+
             private string GetCompositeKey(string section, string prefix, string key, string suffix)
             {
                 var compositeKey = new StringBuilder();
@@ -390,6 +399,43 @@ namespace Atlassian.Bitbucket.Alm.Mercurial
                     && Where.MercurialLocalConfig(localDirectory, out localConfigs))
                 {
                     localConfigs.Where(c => c.EndsWith(".hgrc")).ToList().ForEach(c => AppendMercurialConfig(c, "extensions", entry));
+                }
+            }
+
+            private void CleanMercurialConfiguration(ConfigurationLevel level, Entry entry, string localDirectory)
+            {
+                string portableConfig = null;
+                string systemConfig = null;
+                List<string> globalConfigs = null;
+                List<string> localConfigs = null;
+
+                // save the value to file immediately while we know what is new
+                // find and parse Git's portable config
+                if ((level & ConfigurationLevel.Portable) != 0
+                    && Where.MercurialPortableConfig(out portableConfig))
+                {
+                    CleanMercurialConfig(portableConfig, "extensions", entry);
+                }
+
+                // find and parse Git's system config
+                if ((level & ConfigurationLevel.System) != 0
+                    && Where.MercurialSystemConfig(null, out systemConfig))
+                {
+                    CleanMercurialConfig(systemConfig, "extensions", entry);
+                }
+
+                // find and parse Git's global config
+                if ((level & ConfigurationLevel.Global) != 0
+                    && Where.MercurialGlobalConfig(out globalConfigs))
+                {
+                    globalConfigs.ForEach(c => CleanMercurialConfig(c, "extensions", entry));
+                }
+
+                // find and parse Git's local config
+                if ((level & ConfigurationLevel.Local) != 0
+                    && Where.MercurialLocalConfig(localDirectory, out localConfigs))
+                {
+                    localConfigs.ForEach(c => CleanMercurialConfig(c, "extensions", entry));
                 }
             }
 
@@ -531,6 +577,44 @@ namespace Atlassian.Bitbucket.Alm.Mercurial
                 }
             }
 
+            private void CleanMercurialConfig(string configPath, string section, Entry entry)
+            {
+                try
+                {
+                    var readLines = File.ReadAllLines(configPath);
+                    var moved = false;
+                    var attempts = 1;
+                    while (!moved && attempts < 10)
+                    {
+                        try
+                        {
+                            File.Move(configPath, configPath + ".bak." + DateTime.Now.ToString("yyyyMMddHHmmss"));
+                            moved = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine($"Unable to backup {configPath}");
+                        }
+                    }
+
+                    var lines = new List<string>(readLines);
+                    int i = 0;
+                    foreach(var line in readLines)
+                    {
+                        if(line.StartsWith(entry.Key))
+                        {
+                            lines.RemoveAt(i);
+                        }
+                        i++;
+                    }
+
+                    File.WriteAllLines(configPath, lines);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Failed to write {entry} to {configPath}");
+                }
+            }
         }
 
         public struct Entry: IEquatable<Entry>

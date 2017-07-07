@@ -28,8 +28,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Microsoft.Alm.Git;
 using Microsoft.Win32;
+using Atlassian.Bitbucket.Alm.Mercurial;
+using Trace = Microsoft.Alm.Trace;
+using Where = Atlassian.Bitbucket.Alm.Mercurial.Where;
 
 namespace Microsoft.Alm.Cli
 {
@@ -40,25 +42,30 @@ namespace Microsoft.Alm.Cli
         internal const string ParamForceKey = "--force";
         internal const string FailFace = "U_U";
         internal const string TadaFace = "^_^";
+        internal const string ConfigExtKey = "hgext.mercurial_credential_manager";
+        internal const string ConfigExtSection = "extensions";
 
         //private static readonly Version NetFxMinVersion = new Version(4, 5, 1);
         private static readonly IReadOnlyList<string> FileList = new string[]
         {
-            "Microsoft.Vsts.Authentication.dll",
-            "Microsoft.Alm.Authentication.dll",
-            "Microsoft.Alm.Git.dll",
-            "Microsoft.IdentityModel.Clients.ActiveDirectory.dll",
-            "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll",
+            // dot net GUI
+            "Bitbucket.Alm.Mercurial.dll",
             "Bitbucket.Authentication.dll",
-            "GitHub.Authentication.exe",
-            "hg-credential-manager.exe",
-            "hg-askpass.exe",
+            "Microsoft.Alm.dll",
+            "Microsoft.Alm.Authentication.dll",
+            "mercurial-credential-manager.exe",
+            "mercurial-askpass.exe",
+            // python mercurial extension
+            "mercurial_credential_manager.py",
+            "mercurial_extension_utils.py",
+            "mercurial_extension_utils_loader.py",
+            "mercurial_extension_utils_win_doc.py",
         };
 
         private static readonly IReadOnlyList<string> DocsList = new string[]
         {
-            "hg-askpass.html",
-            "hg-credential-manager.html",
+            "mercurial-askpass.html",
+            "mercurial-credential-manager.html",
         };
 
         public Installer()
@@ -75,105 +82,66 @@ namespace Microsoft.Alm.Cli
                         i += 1;
                         _customPath = args[i];
 
-                        Git.Trace.WriteLine($"{ParamPathKey} = '{_customPath}'.");
+                        Trace.WriteLine($"{ParamPathKey} = '{_customPath}'.");
                     }
                 }
                 else if (string.Equals(args[i], ParamPassiveKey, StringComparison.OrdinalIgnoreCase))
                 {
                     _isPassive = true;
 
-                    Git.Trace.WriteLine($"{ParamPassiveKey} = true.");
+                    Trace.WriteLine($"{ParamPassiveKey} = true.");
                 }
                 else if (string.Equals(args[i], ParamForceKey, StringComparison.OrdinalIgnoreCase))
                 {
                     _isForced = true;
 
-                    Git.Trace.WriteLine($"{ParamForceKey} = true.");
+                    Trace.WriteLine($"{ParamForceKey} = true.");
                 }
             }
         }
 
-        internal static string CygwinPath
+        internal static string UserHgExtPath
         {
             get
             {
-                if (_cygwinPath == null)
-                {
-                    const string Cygwin32GitPath = @"cygwin\usr\libexec\git-core\";
-                    const string Cygwin64GitPath = @"cygwin64\usr\libexec\git-core";
-
-                    foreach (var drive in DriveInfo.GetDrives())
-                    {
-                        string path = Path.Combine(drive.RootDirectory.FullName, Cygwin64GitPath);
-
-                        if (Directory.Exists(path))
-                        {
-                            Git.Trace.WriteLine($"cygwin directory found at '{path}'.");
-
-                            _cygwinPath = path;
-                            break;
-                        }
-
-                        path = Path.Combine(drive.RootDirectory.FullName, Cygwin32GitPath);
-
-                        if (Directory.Exists(path))
-                        {
-                            Git.Trace.WriteLine($"cygwin directory found at '{path}'.");
-
-                            _cygwinPath = path;
-                            break;
-                        }
-                    }
-                }
-
-                return _cygwinPath;
-            }
-        }
-
-        private static string _cygwinPath;
-
-        internal static string UserBinPath
-        {
-            get
-            {
-                if (_userBinPath == null)
+                if (_userHgExtPath == null)
                 {
                     string val1 = null;
                     string val2 = null;
                     string val3 = null;
                     var vars = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Process);
 
-                    // Git for Windows checks %HOME% first
+                    // check %HOME% first
                     if ((val1 = vars["HOME"] as string) != null
                         && Directory.Exists(val1))
                     {
-                        _userBinPath = val1;
+                        _userHgExtPath = val1;
                     }
-                    // Git for Windows checks %HOMEDRIVE%%HOMEPATH% second
+                    // check %HOMEDRIVE%%HOMEPATH% second
                     else if ((val1 = vars["HOMEDRIVE"] as string) != null && (val2 = vars["HOMEPATH"] as string) != null
                         && Directory.Exists(val3 = val1 + val2))
                     {
-                        _userBinPath = val3;
+                        _userHgExtPath = val3;
                     }
-                    // Git for Windows checks %USERPROFILE% last
+                    // check %USERPROFILE% last
                     else if ((val1 = vars["USERPROFILE"] as string) != null)
                     {
-                        _userBinPath = val1;
+                        _userHgExtPath = val1;
                     }
 
-                    if (_userBinPath != null)
+                    if (_userHgExtPath != null)
                     {
-                        // Git for Windows adds %HOME%\bin to %PATH%
-                        _userBinPath = Path.Combine(_userBinPath, "bin");
+                        // check %HOME%\bin to %PATH%
+                        _userHgExtPath = Path.Combine(_userHgExtPath, "bin", "hgext", "mercurial-credential-manager");
 
-                        Git.Trace.WriteLine($"user bin found at '{_userBinPath}'.");
+                        Trace.WriteLine($"user hgext bin found at '{_userHgExtPath}'.");
                     }
                 }
-                return _userBinPath;
+                return _userHgExtPath;
             }
         }
 
-        private static string _userBinPath = null;
+        private static string _userHgExtPath = null;
 
         public int ExitCode
         {
@@ -189,11 +157,14 @@ namespace Microsoft.Alm.Cli
         private TextWriter _stdout = null;
         private TextWriter _stderr = null;
 
+        private string _deploymentPath = null;
+
         public void DeployConsole()
         {
             SetOutput(_isPassive, _isPassive && _isForced);
             try
             {
+#if !DEBUG
                 System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
                 System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
                 if (!principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
@@ -201,38 +172,37 @@ namespace Microsoft.Alm.Cli
                     DeployElevated();
                     return;
                 }
-
-                List<GitInstallation> installations = null;
+#endif
+                List<MercurialInstallation> installations = null;
 
                 // use the custom installation path if supplied
                 if (!string.IsNullOrEmpty(_customPath))
                 {
-                    if (!Directory.Exists(_customPath))
-                    {
-                        Program.LogEvent("No Git installation found, unable to continue deployment.", EventLogEntryType.Error);
-                        Console.Out.WriteLine();
-                        Program.WriteLine($"Fatal: custom path does not exist: '{_customPath}'. {FailFace}");
-                        Pause();
+                    //if (!Directory.Exists(_customPath))
+                    //{
+                    //    Program.LogEvent("No Hg installation found, unable to continue deployment.", EventLogEntryType.Error);
+                    //    Console.Out.WriteLine();
+                    //    Program.WriteLine($"Fatal: custom path does not exist: '{_customPath}'. {FailFace}");
+                    //    Pause();
 
-                        Result = ResultValue.InvalidCustomPath;
-                        return;
-                    }
+                    //    Result = ResultValue.InvalidCustomPath;
+                    //    return;
+                    //}
 
                     Console.Out.WriteLine();
                     Console.Out.WriteLine($"Deploying to custom path: '{_customPath}'.");
+                    _deploymentPath = _customPath;
 
-                    // if the custom path points to a git location then treat it properly
-                    GitInstallation installation;
-                    if (Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows64v2, out installation)
-                        || Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows32v2, out installation)
-                        || Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows32v1, out installation))
-                    {
-                        Git.Trace.WriteLine($"   Git found: '{installation.Path}'.");
+                    //// if the custom path points to a git location then treat it properly
+                    //MercurialInstallation installation;
+                    //if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialConfiguration(_customPath, KnownMercurialDistribution.Mercurialv4, out installation))
+                    //{
+                    //    Trace.WriteLine($"   Git found: '{installation.Path}'.");
 
-                        // track known Git installations
-                        installations = new List<GitInstallation>();
-                        installations.Add(installation);
-                    }
+                    //    // track known Git installations
+                    //    installations = new List<MercurialInstallation>();
+                    //    installations.Add(installation);
+                    //}
 
                     Program.LogEvent($"Custom path deployed to: '{_customPath}'", EventLogEntryType.Information);
                 }
@@ -240,83 +210,41 @@ namespace Microsoft.Alm.Cli
                 else
                 {
                     Console.Out.WriteLine();
-                    Console.Out.WriteLine("Looking for Git installation(s)...");
+                    Console.Out.WriteLine($"Deploying to standard path: '{UserHgExtPath}'.");
+                    _deploymentPath = UserHgExtPath;
+                }
 
-                    if (Where.FindGitInstallations(out installations))
+                Console.Out.WriteLine("Looking for Mercurial installation(s)...");
+                if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
+                {
+                    foreach (var installation in installations)
                     {
-                        foreach (var installation in installations)
-                        {
-                            Console.Out.WriteLine($"  {installation.Path}");
-                        }
+                        Console.Out.WriteLine($"  {installation.Path}");
                     }
                 }
 
                 if (installations == null)
                 {
-                    Program.LogEvent("No Git installation found, unable to continue.", EventLogEntryType.Error);
+                    Program.LogEvent("No Mercurial installation found, unable to continue.", EventLogEntryType.Error);
                     Console.Out.WriteLine();
-                    Program.WriteLine("Fatal: Git was not detected, unable to continue. {FailFace}");
+                    Program.WriteLine("Fatal: Mercurial was not detected, unable to continue. {FailFace}");
                     Pause();
 
-                    Result = ResultValue.GitNotFound;
+                    Result = ResultValue.MercurialNotFound;
                     return;
                 }
 
                 List<string> copiedFiles;
-                foreach (var installation in installations)
-                {
-                    Console.Out.WriteLine();
-                    Console.Out.WriteLine($"Deploying from '{Program.Location}' to '{installation.Path}'.");
-
-                    if (CopyFiles(Program.Location, installation.Libexec, FileList, out copiedFiles))
-                    {
-                        int copiedCount = copiedFiles.Count;
-
-                        foreach (var file in copiedFiles)
-                        {
-                            Console.Out.WriteLine($"  {file}");
-                        }
-
-                        // copy help documents
-                        if (Directory.Exists(installation.Doc)
-                            && CopyFiles(Program.Location, installation.Doc, DocsList, out copiedFiles))
-                        {
-                            copiedCount += copiedFiles.Count;
-
-                            foreach (var file in copiedFiles)
-                            {
-                                Console.Out.WriteLine($"  {file}");
-                            }
-                        }
-
-                        Program.LogEvent($"Deployment to '{installation.Path}' succeeded.", EventLogEntryType.Information);
-                        Console.Out.WriteLine($"     {copiedCount} file(s) copied");
-                    }
-                    else if (_isForced)
-                    {
-                        Program.LogEvent($"Deployment to '{installation.Path}' failed.", EventLogEntryType.Warning);
-                        Program.WriteLine($"  deployment failed. {FailFace}");
-                    }
-                    else
-                    {
-                        Program.LogEvent($"Deployment to '{installation.Path}' failed.", EventLogEntryType.Error);
-                        Program.WriteLine($"  deployment failed. {FailFace}");
-                        Pause();
-
-                        Result = ResultValue.DeploymentFailed;
-                        return;
-                    }
-                }
 
                 Console.Out.WriteLine();
-                Console.Out.WriteLine($"Deploying from '{Program.Location}' to '{UserBinPath}'.");
+                Console.Out.WriteLine($"Deploying from '{Program.Location}' to '{_deploymentPath}'.");
 
-                if (!Directory.Exists(UserBinPath))
+                if (!Directory.Exists(_deploymentPath))
                 {
-                    Directory.CreateDirectory(UserBinPath);
+                    Directory.CreateDirectory(_deploymentPath);
                 }
 
-                if (CopyFiles(Program.Location, UserBinPath, FileList, out copiedFiles))
+                if (CopyFiles(Program.Location, _deploymentPath, FileList, out copiedFiles))
                 {
                     int copiedCount = copiedFiles.Count;
 
@@ -325,7 +253,7 @@ namespace Microsoft.Alm.Cli
                         Console.Out.WriteLine($"  {file}");
                     }
 
-                    if (CopyFiles(Program.Location, UserBinPath, DocsList, out copiedFiles))
+                    if (CopyFiles(Program.Location, _deploymentPath, DocsList, out copiedFiles))
                     {
                         copiedCount = copiedFiles.Count;
 
@@ -335,17 +263,17 @@ namespace Microsoft.Alm.Cli
                         }
                     }
 
-                    Program.LogEvent($"Deployment to '{UserBinPath}' succeeded.", EventLogEntryType.Information);
+                    Program.LogEvent($"Deployment to '{_deploymentPath}' succeeded.", EventLogEntryType.Information);
                     Console.Out.WriteLine($"     {copiedCount} file(s) copied");
                 }
                 else if (_isForced)
                 {
-                    Program.LogEvent($"Deployment to '{UserBinPath}' failed.", EventLogEntryType.Warning);
+                    Program.LogEvent($"Deployment to '{_deploymentPath}' failed.", EventLogEntryType.Warning);
                     Program.WriteLine($"  deployment failed. {FailFace}");
                 }
                 else
                 {
-                    Program.LogEvent($"Deployment to '{UserBinPath}' failed.", EventLogEntryType.Error);
+                    Program.LogEvent($"Deployment to '{_deploymentPath}' failed.", EventLogEntryType.Error);
                     Program.WriteLine($"  deployment failed. {FailFace}");
                     Pause();
 
@@ -353,61 +281,21 @@ namespace Microsoft.Alm.Cli
                     return;
                 }
 
-                if (CygwinPath != null && Directory.Exists(CygwinPath))
-                {
-                    if (CopyFiles(Program.Location, CygwinPath, FileList, out copiedFiles))
-                    {
-                        int copiedCount = copiedFiles.Count;
-
-                        foreach (var file in copiedFiles)
-                        {
-                            Console.Out.WriteLine($"  {file}");
-                        }
-
-                        if (CopyFiles(Program.Location, CygwinPath, DocsList, out copiedFiles))
-                        {
-                            copiedCount = copiedFiles.Count;
-
-                            foreach (var file in copiedFiles)
-                            {
-                                Console.Out.WriteLine($"  {file}");
-                            }
-                        }
-
-                        Program.LogEvent($"Deployment to '{CygwinPath}' succeeded.", EventLogEntryType.Information);
-                        Console.Out.WriteLine($"     {copiedCount} file(s) copied");
-                    }
-                    else if (_isForced)
-                    {
-                        Program.LogEvent($"Deployment to '{CygwinPath}' failed.", EventLogEntryType.Warning);
-                        Program.WriteLine($"  deployment failed. {FailFace}");
-                    }
-                    else
-                    {
-                        Program.LogEvent($"Deployment to '{CygwinPath}' failed.", EventLogEntryType.Error);
-                        Program.WriteLine($"  deployment failed. {FailFace}");
-                        Pause();
-
-                        Result = ResultValue.DeploymentFailed;
-                        return;
-                    }
-                }
-
                 ConfigurationLevel types = ConfigurationLevel.Global;
 
                 ConfigurationLevel updateTypes;
-                if (SetGitConfig(installations, GitConfigAction.Set, types, out updateTypes))
+                if (SetMercurialConfig(installations, MercurialConfigAction.Set, types, out updateTypes))
                 {
                     if ((updateTypes & ConfigurationLevel.Global) == ConfigurationLevel.Global)
                     {
-                        Console.Out.WriteLine("Updated your ~/.gitconfig [git config --global]");
+                        Console.Out.WriteLine("Updated your ~/.hgrc");
                     }
                     else
                     {
                         Console.Out.WriteLine();
-                        Program.WriteLine("Fatal: Unable to update your ~/.gitconfig correctly.");
+                        Program.WriteLine("Fatal: Unable to update your ~/.hgrc correctly.");
 
-                        Result = ResultValue.GitConfigGlobalFailed;
+                        Result = ResultValue.MercurialConfigGlobalFailed;
                         return;
                     }
                 }
@@ -447,7 +335,7 @@ namespace Microsoft.Alm.Cli
                     && Version.TryParse(netfxString, out netfxVerson))
             {
                 Program.LogEvent($"NetFx version {netfxVerson.ToString(3)} detected.", EventLogEntryType.Information);
-                Git.Trace.WriteLine($"NetFx version {netfxVerson.ToString(3)} detected.");
+                Trace.WriteLine($"NetFx version {netfxVerson.ToString(3)} detected.");
 
                 version = netfxVerson;
             }
@@ -468,7 +356,7 @@ namespace Microsoft.Alm.Cli
                     return;
                 }
 
-                List<GitInstallation> installations = null;
+                List<MercurialInstallation> installations = null;
 
                 // use the custom installation path if supplied
                 if (!string.IsNullOrEmpty(_customPath))
@@ -487,15 +375,13 @@ namespace Microsoft.Alm.Cli
                     Console.Out.WriteLine($"Removing from custom path: '{_customPath}'.");
 
                     // if the custom path points to a git location then treat it properly
-                    GitInstallation installation;
-                    if (Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows64v2, out installation)
-                        || Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows32v2, out installation)
-                        || Where.FindGitInstallation(_customPath, KnownGitDistribution.GitForWindows32v1, out installation))
+                    MercurialInstallation installation;
+                    if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallation(_customPath, KnownMercurialDistribution.Mercurialv4, out installation))
                     {
-                        Git.Trace.WriteLine($"Git found: '{installation.Path}'.");
+                        Trace.WriteLine($"Git found: '{installation.Path}'.");
 
                         // track known Git installations
-                        installations = new List<GitInstallation>();
+                        installations = new List<MercurialInstallation>();
                         installations.Add(installation);
                     }
                 }
@@ -505,7 +391,7 @@ namespace Microsoft.Alm.Cli
                     Console.Out.WriteLine();
                     Console.Out.WriteLine("Looking for Git installation(s)...");
 
-                    if (Where.FindGitInstallations(out installations))
+                    if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
                     {
                         foreach (var installation in installations)
                         {
@@ -516,19 +402,19 @@ namespace Microsoft.Alm.Cli
 
                 if (installations == null)
                 {
-                    Program.LogEvent($"Git was not detected, unable to continue with removal.", EventLogEntryType.Error);
+                    Program.LogEvent($"Mercurial was not detected, unable to continue with removal.", EventLogEntryType.Error);
                     Console.Out.WriteLine();
-                    Program.WriteLine("fatal: Git was not detected, unable to continue. U_U");
+                    Program.WriteLine("fatal: Mercurial was not detected, unable to continue. U_U");
                     Pause();
 
-                    Result = ResultValue.GitNotFound;
+                    Result = ResultValue.MercurialNotFound;
                     return;
                 }
 
                 ConfigurationLevel types = ConfigurationLevel.Global | ConfigurationLevel.System;
 
                 ConfigurationLevel updateTypes;
-                if (SetGitConfig(installations, GitConfigAction.Unset, types, out updateTypes))
+                if (SetMercurialConfig(installations, MercurialConfigAction.Unset, types, out updateTypes))
                 {
                     if ((updateTypes & ConfigurationLevel.System) == ConfigurationLevel.System)
                     {
@@ -545,7 +431,7 @@ namespace Microsoft.Alm.Cli
                             // only 'fatal' when not forced
                             Program.Write("Fatal: ");
 
-                            Result = ResultValue.GitConfigSystemFailed;
+                            Result = ResultValue.MercurialConfigSystemFailed;
                             return;
                         }
 
@@ -561,7 +447,7 @@ namespace Microsoft.Alm.Cli
                         Console.Out.WriteLine();
                         Program.WriteLine("Fatal: Unable to update your ~/.gitconfig correctly.");
 
-                        Result = ResultValue.GitConfigGlobalFailed;
+                        Result = ResultValue.MercurialConfigGlobalFailed;
                         return;
                     }
                 }
@@ -572,49 +458,49 @@ namespace Microsoft.Alm.Cli
                     Console.Out.WriteLine();
                     Console.Out.WriteLine($"Removing from '{installation.Path}'.");
 
-                    if (CleanFiles(installation.Libexec, FileList, out cleanedFiles))
-                    {
-                        int cleanedCount = cleanedFiles.Count;
+                    //if (CleanFiles(installation.Libexec, FileList, out cleanedFiles))
+                    //{
+                    //    int cleanedCount = cleanedFiles.Count;
 
-                        foreach (var file in cleanedFiles)
-                        {
-                            Console.Out.WriteLine($"  {file}");
-                        }
+                    //    foreach (var file in cleanedFiles)
+                    //    {
+                    //        Console.Out.WriteLine($"  {file}");
+                    //    }
 
-                        // clean help documents
-                        if (Directory.Exists(installation.Doc)
-                            && CleanFiles(installation.Doc, DocsList, out cleanedFiles))
-                        {
-                            cleanedCount += cleanedFiles.Count;
+                    //    // clean help documents
+                    //    if (Directory.Exists(installation.Doc)
+                    //        && CleanFiles(installation.Doc, DocsList, out cleanedFiles))
+                    //    {
+                    //        cleanedCount += cleanedFiles.Count;
 
-                            foreach (var file in cleanedFiles)
-                            {
-                                Console.Out.WriteLine($"  {file}");
-                            }
-                        }
+                    //        foreach (var file in cleanedFiles)
+                    //        {
+                    //            Console.Out.WriteLine($"  {file}");
+                    //        }
+                    //    }
 
-                        Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
-                    }
-                    else if (_isForced)
-                    {
-                        Console.Error.WriteLine($"  removal failed. {FailFace}");
-                    }
-                    else
-                    {
-                        Console.Error.WriteLine($"  removal failed. {FailFace}");
-                        Pause();
+                    //    Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
+                    //}
+                    //else if (_isForced)
+                    //{
+                    //    Console.Error.WriteLine($"  removal failed. {FailFace}");
+                    //}
+                    //else
+                    //{
+                    //    Console.Error.WriteLine($"  removal failed. {FailFace}");
+                    //    Pause();
 
-                        Result = ResultValue.RemovalFailed;
-                        return;
-                    }
+                    //    Result = ResultValue.RemovalFailed;
+                    //    return;
+                    //}
                 }
 
-                if (Directory.Exists(UserBinPath))
+                if (Directory.Exists(UserHgExtPath))
                 {
                     Console.Out.WriteLine();
-                    Console.Out.WriteLine($"Removing from '{UserBinPath}'.");
+                    Console.Out.WriteLine($"Removing from '{UserHgExtPath}'.");
 
-                    if (CleanFiles(UserBinPath, FileList, out cleanedFiles))
+                    if (CleanFiles(UserHgExtPath, FileList, out cleanedFiles))
                     {
                         int cleanedCount = cleanedFiles.Count;
 
@@ -623,7 +509,7 @@ namespace Microsoft.Alm.Cli
                             Console.Out.WriteLine($"  {file}");
                         }
 
-                        if (CleanFiles(UserBinPath, DocsList, out cleanedFiles))
+                        if (CleanFiles(UserHgExtPath, DocsList, out cleanedFiles))
                         {
                             cleanedCount += cleanedFiles.Count;
 
@@ -649,30 +535,30 @@ namespace Microsoft.Alm.Cli
                     }
                 }
 
-                if (CygwinPath != null && Directory.Exists(CygwinPath))
-                {
-                    if (CleanFiles(CygwinPath, FileList, out cleanedFiles))
-                    {
-                        int cleanedCount = cleanedFiles.Count;
+                //if (CygwinPath != null && Directory.Exists(CygwinPath))
+                //{
+                //    if (CleanFiles(CygwinPath, FileList, out cleanedFiles))
+                //    {
+                //        int cleanedCount = cleanedFiles.Count;
 
-                        foreach (var file in cleanedFiles)
-                        {
-                            Console.Out.WriteLine($"  {file}");
-                        }
+                //        foreach (var file in cleanedFiles)
+                //        {
+                //            Console.Out.WriteLine($"  {file}");
+                //        }
 
-                        if (CleanFiles(CygwinPath, DocsList, out cleanedFiles))
-                        {
-                            cleanedCount += cleanedFiles.Count;
+                //        if (CleanFiles(CygwinPath, DocsList, out cleanedFiles))
+                //        {
+                //            cleanedCount += cleanedFiles.Count;
 
-                            foreach (var file in cleanedFiles)
-                            {
-                                Console.Out.WriteLine($"  {file}");
-                            }
-                        }
+                //            foreach (var file in cleanedFiles)
+                //            {
+                //                Console.Out.WriteLine($"  {file}");
+                //            }
+                //        }
 
-                        Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
-                    }
-                }
+                //        Console.Out.WriteLine($"     {cleanedCount} file(s) cleaned");
+                //    }
+                //}
 
                 // all necessary content has been deployed to the system
                 Result = ResultValue.Success;
@@ -689,73 +575,68 @@ namespace Microsoft.Alm.Cli
             }
         }
 
-        public bool SetGitConfig(List<GitInstallation> installations, GitConfigAction action, ConfigurationLevel type, out ConfigurationLevel updated)
+        public bool SetMercurialConfig(List<MercurialInstallation> installations, MercurialConfigAction action, ConfigurationLevel type, out ConfigurationLevel updated)
         {
-            Git.Trace.WriteLine($"action = '{action}'.");
+            Trace.WriteLine($"action = '{action}'.");
 
             updated = ConfigurationLevel.None;
 
-            if ((installations == null || installations.Count == 0) && !Where.FindGitInstallations(out installations))
+            if ((installations == null || installations.Count == 0) && !Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
             {
-                Git.Trace.WriteLine("No Git installations detected to update.");
+                Trace.WriteLine("No Mercurial installations detected to update.");
                 return false;
             }
 
             if ((type & ConfigurationLevel.Global) == ConfigurationLevel.Global)
             {
-                // the 0 entry in the installations list is the "preferred" instance of Git
-                string gitCmdPath = installations[0].Git;
-                string globalCmd = action == GitConfigAction.Set
-                    ? "config --global credential.helper manager"
-                    : "config --global --unset credential.helper";
+                // the 0 entry in the installations list is the "preferred" instance of Mercurial
+                string hgPath = installations[0].Mercurial;
+                bool set = action == MercurialConfigAction.Set;
+                var home = Where.Home();
 
-                if (ExecuteGit(gitCmdPath, globalCmd, 0, 5))
+                var config = Configuration.ReadConfiguration(home, false, true);
+                //var prefix = "hgext";
+                var section = "extensions";
+                var key = "mercurial_credential_manager";
+
+                var value = Path.Combine(_deploymentPath, "mercurial_credential_manager.py");
+                var entry = new Configuration.Entry(key, value);
+                if(config.TrySetEntry(ConfigurationLevel.Global, section, string.Empty, key, string.Empty, value))
                 {
-                    Git.Trace.WriteLine("updating ~/.gitconfig succeeded.");
-
                     updated |= ConfigurationLevel.Global;
-                }
-                else
-                {
-                    Git.Trace.WriteLine("updating ~/.gitconfig failed.");
-
-                    Console.Out.WriteLine();
-                    Console.Error.WriteLine("Fatal: Unable to update ~/.gitconfig.");
-                    Pause();
-                    return false;
                 }
             }
 
             if ((type & ConfigurationLevel.System) == ConfigurationLevel.System)
             {
-                string systemCmd = action == GitConfigAction.Set
-                    ? "config --system credential.helper manager"
-                    : "config --system --unset credential.helper";
+                //string systemCmd = action == GitConfigAction.Set
+                //    ? "config --system credential.helper manager"
+                //    : "config --system --unset credential.helper";
 
-                int successCount = 0;
+                //int successCount = 0;
 
-                foreach (var installation in installations)
-                {
-                    if (ExecuteGit(installation.Git, systemCmd, 0, 5))
-                    {
-                        Git.Trace.WriteLine("updating /etc/gitconfig succeeded.");
+                //foreach (var installation in installations)
+                //{
+                //    if (ExecuteGit(installation.Git, systemCmd, 0, 5))
+                //    {
+                //        Trace.WriteLine("updating /etc/gitconfig succeeded.");
 
-                        successCount++;
-                    }
-                    else
-                    {
-                        Git.Trace.WriteLine("updating ~/.gitconfig failed.");
-                    }
-                }
+                //        successCount++;
+                //    }
+                //    else
+                //    {
+                //        Trace.WriteLine("updating ~/.gitconfig failed.");
+                //    }
+                //}
 
-                if (successCount == installations.Count)
-                {
-                    updated |= ConfigurationLevel.System;
-                }
-                else
-                {
-                    return false;
-                }
+                //if (successCount == installations.Count)
+                //{
+                //    updated |= ConfigurationLevel.System;
+                //}
+                //else
+                //{
+                //    return false;
+                //}
             }
 
             return true;
@@ -767,7 +648,7 @@ namespace Microsoft.Alm.Cli
 
             if (!Directory.Exists(path))
             {
-                Git.Trace.WriteLine($"path '{path}' does not exist.");
+                Trace.WriteLine($"path '{path}' does not exist.");
                 return false;
             }
 
@@ -777,7 +658,7 @@ namespace Microsoft.Alm.Cli
                 {
                     string target = Path.Combine(path, file);
 
-                    Git.Trace.WriteLine($"clean '{target}'.");
+                    Trace.WriteLine($"clean '{target}'.");
 
                     File.Delete(target);
 
@@ -788,7 +669,7 @@ namespace Microsoft.Alm.Cli
             }
             catch
             {
-                Git.Trace.WriteLine($"clean of '{path}' failed.");
+                Trace.WriteLine($"clean of '{path}' failed.");
                 return false;
             }
         }
@@ -799,7 +680,7 @@ namespace Microsoft.Alm.Cli
 
             if (!Directory.Exists(srcPath))
             {
-                Git.Trace.WriteLine($"source '{srcPath}' does not exist.");
+                Trace.WriteLine($"source '{srcPath}' does not exist.");
                 return false;
             }
 
@@ -809,10 +690,16 @@ namespace Microsoft.Alm.Cli
                 {
                     foreach (string file in files)
                     {
-                        Git.Trace.WriteLine($"copy '{file}' from '{srcPath}' to '{dstPath}'.");
+                        Trace.WriteLine($"copy '{file}' from '{srcPath}' to '{dstPath}'.");
 
                         string src = Path.Combine(srcPath, file);
                         string dst = Path.Combine(dstPath, file);
+
+                        if(!File.Exists(src))
+                        {
+                            Trace.WriteLine($"Unable to copy '{src}' does not exist.");
+                            continue;
+                        }
 
                         File.Copy(src, dst, true);
 
@@ -823,16 +710,16 @@ namespace Microsoft.Alm.Cli
                 }
                 catch
                 {
-                    Git.Trace.WriteLine("copy failed.");
+                    Trace.WriteLine("copy failed.");
                     return false;
                 }
             }
             else
             {
-                Git.Trace.WriteLine($"destination '{dstPath}' does not exist.");
+                Trace.WriteLine($"destination '{dstPath}' does not exist.");
             }
 
-            Git.Trace.WriteLine("copy failed.");
+            Trace.WriteLine("copy failed.");
             return false;
         }
 
@@ -878,7 +765,7 @@ namespace Microsoft.Alm.Cli
                     WorkingDirectory = Program.Location,
                 };
 
-                Git.Trace.WriteLine($"create process: cmd '{options.Verb}' '{options.FileName}' '{options.Arguments}' .");
+                Trace.WriteLine($"create process: cmd '{options.Verb}' '{options.FileName}' '{options.Arguments}' .");
 
                 try
                 {
@@ -888,47 +775,17 @@ namespace Microsoft.Alm.Cli
                     // wait for the process to complete
                     elevated.WaitForExit();
 
-                    Git.Trace.WriteLine($"process exited with {elevated.ExitCode}.");
+                    Trace.WriteLine($"process exited with {elevated.ExitCode}.");
 
                     // exit with the elevated process' exit code
                     this.ExitCode = elevated.ExitCode;
                 }
                 catch (Exception exception)
                 {
-                    Git.Trace.WriteLine($"process failed with '{exception.Message}'");
+                    Trace.WriteLine($"process failed with '{exception.Message}'");
                     this.Result = ResultValue.Unprivileged;
                 }
             }
-        }
-
-        private static bool ExecuteGit(string gitCmdPath, string command, params int[] allowedExitCodes)
-        {
-            if (string.IsNullOrEmpty(gitCmdPath) || string.IsNullOrEmpty(command))
-                return false;
-
-            if (!File.Exists(gitCmdPath))
-                return false;
-
-            var options = new ProcessStartInfo()
-            {
-                Arguments = command,
-                FileName = gitCmdPath,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            };
-
-            Git.Trace.WriteLine($"create process: cmd '{options.FileName}' '{options.Arguments}' .");
-
-            var gitProcess = Process.Start(options);
-
-            gitProcess.WaitForExit();
-
-            Git.Trace.WriteLine($"Git exited with {gitProcess.ExitCode}.");
-
-            if (allowedExitCodes != null && allowedExitCodes.Length > 0)
-                return allowedExitCodes.Contains(gitProcess.ExitCode);
-            else
-                return gitProcess.ExitCode == 0;
         }
 
         private void Pause()
@@ -983,7 +840,7 @@ namespace Microsoft.Alm.Cli
                     WorkingDirectory = Program.Location,
                 };
 
-                Git.Trace.WriteLine($"create process: cmd '{options.Verb}' '{options.FileName}' '{options.Arguments}' .");
+                Trace.WriteLine($"create process: cmd '{options.Verb}' '{options.FileName}' '{options.Arguments}' .");
 
                 try
                 {
@@ -993,14 +850,14 @@ namespace Microsoft.Alm.Cli
                     // wait for the process to complete
                     elevated.WaitForExit();
 
-                    Git.Trace.WriteLine($"process exited with {elevated.ExitCode}.");
+                    Trace.WriteLine($"process exited with {elevated.ExitCode}.");
 
                     // exit with the elevated process' exit code
                     this.ExitCode = elevated.ExitCode;
                 }
                 catch (Exception exception)
                 {
-                    Git.Trace.WriteLine($"! process failed with '{exception.Message}'.");
+                    Trace.WriteLine($"! process failed with '{exception.Message}'.");
                     this.Result = ResultValue.Unprivileged;
                 }
             }
@@ -1039,13 +896,13 @@ namespace Microsoft.Alm.Cli
             DeploymentFailed,
             NetFxNotFound,
             Unprivileged,
-            GitConfigGlobalFailed,
-            GitConfigSystemFailed,
-            GitNotFound,
+            MercurialConfigGlobalFailed,
+            MercurialConfigSystemFailed,
+            MercurialNotFound,
             RemovalFailed,
         }
 
-        public enum GitConfigAction
+        public enum MercurialConfigAction
         {
             Set,
             Unset,

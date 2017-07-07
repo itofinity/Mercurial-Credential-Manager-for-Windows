@@ -32,51 +32,8 @@ using Microsoft.Win32;
 
 namespace Microsoft.Alm.Git
 {
-    public static class Where
+    public class Where : Microsoft.Alm.Where
     {
-        /// <summary>
-        /// Finds the "best" path to an app of a given name.
-        /// </summary>
-        /// <param name="name">The name of the application, without extension, to find.</param>
-        /// <param name="path">
-        /// Path to the first match file which the operating system considers executable.
-        /// </param>
-        /// <returns><see langword="True"/> if succeeds; <see langword="false"/> otherwise.</returns>
-        static public bool FindApp(string name, out string path)
-        {
-            if (!String.IsNullOrWhiteSpace(name))
-            {
-                string pathext = Environment.GetEnvironmentVariable("PATHEXT");
-                string envpath = Environment.GetEnvironmentVariable("PATH");
-
-                string[] exts = pathext.Split(';');
-                string[] paths = envpath.Split(';');
-
-                for (int i = 0; i < paths.Length; i++)
-                {
-                    if (String.IsNullOrWhiteSpace(paths[i]))
-                        continue;
-
-                    for (int j = 0; j < exts.Length; j++)
-                    {
-                        if (String.IsNullOrWhiteSpace(exts[j]))
-                            continue;
-
-                        string value = String.Format("{0}\\{1}{2}", paths[i], name, exts[j]);
-                        if (File.Exists(value))
-                        {
-                            value = value.Replace("\\\\", "\\");
-                            path = value;
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            path = null;
-            return false;
-        }
-
         public static bool FindGitInstallation(string path, KnownGitDistribution distro, out GitInstallation installation)
         {
             installation = new GitInstallation(path, distro);
@@ -232,43 +189,6 @@ namespace Microsoft.Alm.Git
             Git.Trace.WriteLine($"found {installations.Count} Git installation(s).");
 
             return installations.Count > 0;
-        }
-
-        /// <summary>
-        /// Calculate the path to the user's home directory (~/ or %HOME%) that Git will rely on.
-        /// </summary>
-        /// <returns>The path to the user's home directory.</returns>
-        public static string Home()
-        {
-            // Git relies on the %HOME% environment variable to represent the users home directory it
-            // can contain embedded environment variables, so we need to expand it
-            string path = Environment.GetEnvironmentVariable("HOME", EnvironmentVariableTarget.Process);
-
-            if (path != null)
-            {
-                path = Environment.ExpandEnvironmentVariables(path);
-
-                // If the path is good, return it.
-                if (Directory.Exists(path))
-                    return path;
-            }
-
-            // Absent the %HOME% variable, Git will construct it via %HOMEDRIVE%%HOMEPATH%, so we'll
-            // attempt to that here and if it is valid, return it as %HOME%.
-            string homeDrive = Environment.GetEnvironmentVariable("HOMEDRIVE", EnvironmentVariableTarget.Process);
-            string homePath = Environment.GetEnvironmentVariable("HOMEPATH", EnvironmentVariableTarget.Process);
-
-            if (homeDrive != null && homePath != null)
-            {
-                path = homeDrive + homePath;
-
-                if (Directory.Exists(path))
-                    return path;
-            }
-
-            // When all else fails, Git falls back to %USERPROFILE% as the user's home directory, so
-            // should we.
-            return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         }
 
         /// <summary>

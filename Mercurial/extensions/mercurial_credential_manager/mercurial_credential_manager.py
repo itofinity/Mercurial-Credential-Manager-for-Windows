@@ -1,55 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-# mercurial_mercurial-credential-manager: save passwords in password database
-#
+# mercurial-credential-manager
+# 
+# Based extensively on the Mercurial_Keyring
 # Copyright (c) 2009 Marcin Kasperski <Marcin.Kasperski@mekk.waw.pl>
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# See README.txt for more details.
-
-'''securely save HTTP and SMTP passwords to encrypted storage
-
-mercurial_keyring securely saves HTTP and SMTP passwords in password
-databases (Gnome Keyring, KDE KWallet, OSXKeyChain, Win32 crypto
-services).
-
-The process is automatic.  Whenever bare Mercurial just prompts for
-the password, Mercurial with mercurial_keyring enabled checks whether
-saved password is available first.  If so, it is used.  If not, you
-will be prompted for the password, but entered password will be
-saved for the future use.
-
-In case saved password turns out to be invalid (HTTP or SMTP login
-fails) it is dropped, and you are asked for current password.
-
-Actual password storage is implemented by Python keyring library, this
-extension glues those services to Mercurial. Consult keyring
-documentation for information how to configure actual password
-backend (by default keyring guesses, usually correctly, for example
-you get KDE Wallet under KDE, and Gnome Keyring under Gnome or Unity).
-'''
 
 import urllib2
 import smtplib
@@ -160,6 +114,26 @@ class HTTPPasswordHandler(object):
     SRC_URLCACHE = "urllib temporary cache"
     SRC_KEYRING = "keyring"
 
+    @staticmethod
+    def get_guiprompt(ui):
+        # check for an override GUI
+        gui_prompt = os.environ.get('MCM_GUI')
+        if gui_prompt and os.path.isfile(gui_prompt):
+            return gui_prompt
+
+        # check for the default GUI
+        if os.name == "nt":
+            gui_prompt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mercurial-credential-manager.exe")
+            if os.path.isfile(gui_prompt):
+                return gui_prompt
+        else:
+            gui_prompt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mercurial-credential-manager")
+            if os.path.isfile(gui_prompt):
+                return gui_prompt
+
+        _debug(ui,_("mercurial-credential-manager: GUI not found as [mercurial-credential-manager(.exe)] or [%s].\n") % (os.environ.get('MCM_GUI')))
+        return None
+
     def get_credentials(self, pwmgr, realm, authuri, skip_caches=False):
         """
         Looks up for user credentials in various places, returns them
@@ -221,6 +195,25 @@ class HTTPPasswordHandler(object):
 
         return actual_user, None, None, keyring_url
 
+    @staticmethod
+    def prompt_interactively(ui, user, realm, url):
+        """Actual interactive prompt"""
+        if not ui.interactive():
+			raise util.Abort(_('keyring: http authorization required but program used in non-interactive mode'))
+
+        if not user:
+            ui.status(_("keyring: username not specified in hgrc (or in url). Password will not be saved.\n"))
+
+        ui.write(_("http authorization required\n"))
+        ui.status(_("realm: %s\n") % realm)
+        ui.status(_("url: %s\n") % url)
+        if user:
+            ui.write(_("user: %s (fixed in hgrc or url)\n" % user))
+        else:
+            user = ui.prompt(_("user:"), default=None)
+        pwd = ui.getpass(_("password: "))
+        return user, pwd
+    
     def find_auth(self, pwmgr, realm, authuri, req):
         """
         Actual implementation of find_user_password - different
@@ -245,8 +238,10 @@ class HTTPPasswordHandler(object):
 
         parsed_url, url_user_unused, url_passwd_unused = self.unpack_url(authuri)
         
-        gui_prompt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mercurial-credential-manager.exe")
-        if os.path.isfile(gui_prompt):
+        # check for an override GUI
+        gui_prompt = self.get_guiprompt(ui)
+
+        if gui_prompt and os.path.isfile(gui_prompt):
             _debug(ui,_("mercurial-credential-manager: GUI GET: %s.\n") % (gui_prompt))
             from subprocess import Popen, PIPE
             proc = Popen([gui_prompt, "GET"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -265,6 +260,12 @@ class HTTPPasswordHandler(object):
                 user = username[0]
             if password[0]:
                 pwd = password[0]
+            if pwd:
+                self._note_last_reply(realm, authuri, user, req)
+                return user, pwd
+        else:
+            # Last resort: interactive prompt
+            user, pwd = self.prompt_interactively(ui, user, realm, final_url)
             if pwd:
                 self._note_last_reply(realm, authuri, user, req)
                 return user, pwd
@@ -337,8 +338,8 @@ class HTTPPasswordHandler(object):
                 _debug(ui, _("Working after bad authentication, cached passwords not used %s") % str(self.last_reply))
 
                 parsed_url, url_user, url_passwd = self.unpack_url(authuri)
-                gui_prompt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mercurial-credential-manager.exe")
-                if os.path.isfile(gui_prompt):
+                gui_prompt = self.get_guiprompt(ui)
+                if gui_prompt and os.path.isfile(gui_prompt):
                     _debug(ui,_("mercurial-credential-manager: GUI ERASE: %s.\n") % (gui_prompt))
                     from subprocess import Popen, PIPE
                     proc = Popen([gui_prompt, "ERASE"], stdin=PIPE, stdout=PIPE, stderr=PIPE)

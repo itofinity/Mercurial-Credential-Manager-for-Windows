@@ -79,13 +79,17 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Bitbucket.Alm.Mercurial\Bitbucket.Alm.Mercurial.csproj">
+      <Project>{21840cd4-091c-4552-a5fd-4bc3e0392f49}</Project>
+      <Name>Bitbucket.Alm.Mercurial</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Microsoft.Alm.Authentication\Microsoft.Alm.Authentication.csproj">
       <Project>{C1DAABC1-B493-459D-BB4F-04FBEFB1BA13}</Project>
       <Name>Microsoft.Alm.Authentication</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Microsoft.Alm.Git\Microsoft.Alm.Git.csproj">
-      <Project>{4827c16d-5c58-406d-ab3f-3700bb0d06fe}</Project>
-      <Name>Microsoft.Alm.Git</Name>
+    <ProjectReference Include="..\Microsoft.Alm\Microsoft.Alm.csproj">
+      <Project>{dbfd1cdf-f392-493d-8f2a-4f701b374db1}</Project>
+      <Name>Microsoft.Alm</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -26,7 +26,7 @@ IF %netfx% LSS 378675 (
     GOTO :NETFX_NOT_FOUND
 )
 
-"%~dp0\git-credential-manager" install
+"%~dp0\mercurial-credential-manager" install
 
 
 :SUCCESS
@@ -53,6 +53,6 @@ EXIT /B 3
 
 :PRINT_HELP
 
-"%~dp0\git-credential-manager" ?
+"%~dp0\mercurial-credential-manager" ?
 
 EXIT /B 0

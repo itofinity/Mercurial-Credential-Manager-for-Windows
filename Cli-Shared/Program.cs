@@ -6,10 +6,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
-using Microsoft.Alm.Git;
 using Microsoft.Win32.SafeHandles;
-using Bitbucket = Atlassian.Bitbucket.Authentication;
 using System.Collections.Generic;
+using Atlassian.Bitbucket.Alm.Mercurial;
 
 namespace Microsoft.Alm.Cli
 {
@@ -47,7 +46,7 @@ namespace Microsoft.Alm.Cli
         internal const string EnvironValidateKey = "HGCM_VALIDATE";
         internal const string EnvironWritelogKey = "HGCM_WRITELOG";
 
-        internal const string EnvironConfigTraceKey = Git.Trace.EnvironmentVariableKey;
+        internal const string EnvironConfigTraceKey = Trace.EnvironmentVariableKey;
 
         internal static readonly StringComparer EnvironKeyComparer = StringComparer.OrdinalIgnoreCase;
 
@@ -58,7 +57,7 @@ namespace Microsoft.Alm.Cli
 
         internal static Action<Exception> _dieExceptionCallback = (Exception exception) =>
         {
-            Git.Trace.WriteLine(exception.ToString());
+            Trace.WriteLine(exception.ToString());
             LogEvent(exception.ToString(), EventLogEntryType.Error);
 
             string message;
@@ -76,10 +75,10 @@ namespace Microsoft.Alm.Cli
 
         internal static Action<string> _dieMessageCallback = (string message) =>
         {
-            Git.Trace.WriteLine($"fatal: {message}");
+            Trace.WriteLine($"fatal: {message}");
             Program.WriteLine($"fatal: {message}");
 
-            Git.Trace.Flush();
+            Trace.Flush();
 
             Environment.Exit(-1);
         };
@@ -88,7 +87,7 @@ namespace Microsoft.Alm.Cli
         {
             if (!String.IsNullOrWhiteSpace(message))
             {
-                Git.Trace.WriteLine(message);
+                Trace.WriteLine(message);
                 Program.WriteLine(message);
             }
 
@@ -237,7 +236,7 @@ namespace Microsoft.Alm.Cli
             // look for authority settings
             if (TryReadString(operationArguments, ConfigAuthorityKey, EnvironAuthorityKey, out value))
             {
-                Git.Trace.WriteLine($"{ConfigAuthorityKey} = '{value}'.");
+                Trace.WriteLine($"{ConfigAuthorityKey} = '{value}'.");
 
                 if (ConfigKeyComparer.Equals(value, "Integrated")
                          || ConfigKeyComparer.Equals(value, "Windows")
@@ -257,7 +256,7 @@ namespace Microsoft.Alm.Cli
             // look for interactivity config settings
             if (TryReadString(operationArguments, ConfigInteractiveKey, EnvironInteractiveKey, out value))
             {
-                Git.Trace.WriteLine($"{EnvironInteractiveKey} = '{value}'.");
+                Trace.WriteLine($"{EnvironInteractiveKey} = '{value}'.");
 
                 if (ConfigKeyComparer.Equals(value, "always")
                     || ConfigKeyComparer.Equals(value, "true")
@@ -305,7 +304,7 @@ namespace Microsoft.Alm.Cli
             // look for http proxy config settings
             if (TryReadString(operationArguments, ConfigHttpProxyKey, EnvironHttpProxyKey, out value))
             {
-                Git.Trace.WriteLine($"{ConfigHttpProxyKey} = '{value}'.");
+                Trace.WriteLine($"{ConfigHttpProxyKey} = '{value}'.");
 
                 operationArguments.SetProxy(value);
             }
@@ -313,10 +312,10 @@ namespace Microsoft.Alm.Cli
             {
                 // check the git-config http.proxy setting just-in-case
                 Configuration.Entry entry;
-                if (operationArguments.GitConfiguration.TryGetEntry("http", operationArguments.QueryUri, "proxy", out entry)
+                if (operationArguments.MercurialConfiguration.TryGetEntry("http", operationArguments.QueryUri, "proxy", out entry)
                     && !String.IsNullOrWhiteSpace(entry.Value))
                 {
-                    Git.Trace.WriteLine($"http.proxy = '{entry.Value}'.");
+                    Trace.WriteLine($"http.proxy = '{entry.Value}'.");
 
                     operationArguments.SetProxy(entry.Value);
                 }
@@ -325,7 +324,7 @@ namespace Microsoft.Alm.Cli
             // look for custom namespace config settings
             if (TryReadString(operationArguments, ConfigNamespaceKey, EnvironNamespaceKey, out value))
             {
-                Git.Trace.WriteLine($"{ConfigNamespaceKey} = '{value}'.");
+                Trace.WriteLine($"{ConfigNamespaceKey} = '{value}'.");
 
                 operationArguments.CustomNamespace = value;
             }
@@ -335,7 +334,7 @@ namespace Microsoft.Alm.Cli
         {
             /*** try-squelch due to UAC issues which require a proper installer to work around ***/
 
-            Git.Trace.WriteLine(message);
+            Trace.WriteLine(message);
 
             try
             {
@@ -370,13 +369,13 @@ namespace Microsoft.Alm.Cli
                                 || (operationArguments.Interactivity != Interactivity.Never
                                     && (credentials = await basicAuth.AcquireCredentials(operationArguments.TargetUri)) != null))
                             {
-                                Git.Trace.WriteLine("credentials found.");
+                                Trace.WriteLine("credentials found.");
                                 // no need to save the credentials explicitly, as Git will call back with
                                 // a store command if the credentials are valid.
                             }
                             else
                             {
-                                Git.Trace.WriteLine($"credentials for '{operationArguments.TargetUri}' not found.");
+                                Trace.WriteLine($"credentials for '{operationArguments.TargetUri}' not found.");
                                 LogEvent($"Failed to retrieve credentials for '{operationArguments.TargetUri}'.", EventLogEntryType.FailureAudit);
                             }
                         }).Wait();
@@ -385,7 +384,7 @@ namespace Microsoft.Alm.Cli
 
                 case AuthorityType.Bitbucket:
                     {
-                        var bbcAuth = authentication as Bitbucket.Authentication;
+                        var bbcAuth = authentication as Atlassian.Bitbucket.Authentication.Authentication;
 
                         Task.Run(async () =>
                         {
@@ -398,7 +397,7 @@ namespace Microsoft.Alm.Cli
                                         && (!operationArguments.ValidateCredentials
                                             || ((credentials = await bbcAuth.ValidateCredentials(operationArguments.TargetUri, operationArguments.CredUsername, credentials)) != null))))
                             {
-                                Git.Trace.WriteLine($"credentials for '{operationArguments.TargetUri}' found.");
+                                Trace.WriteLine($"credentials for '{operationArguments.TargetUri}' found.");
                                 // Bitbucket relies on a username + secret, so make sure there is a
                                 // username to return
                                 if (operationArguments.CredUsername != null)
@@ -417,7 +416,7 @@ namespace Microsoft.Alm.Cli
 
                 case AuthorityType.Ntlm:
                     {
-                        Git.Trace.WriteLine($"'{operationArguments.TargetUri}' is NTLM.");
+                        Trace.WriteLine($"'{operationArguments.TargetUri}' is NTLM.");
                         credentials = BasicAuthentication.NtlmCredentials;
                     }
                     break;
@@ -466,7 +465,7 @@ namespace Microsoft.Alm.Cli
 
             if (!StandardErrorIsTty || !StandardInputIsTty)
             {
-                Git.Trace.WriteLine("not a tty detected, abandoning prompt.");
+                Trace.WriteLine("not a tty detected, abandoning prompt.");
                 return null;
             }
 
@@ -495,7 +494,7 @@ namespace Microsoft.Alm.Cli
                     throw new Win32Exception(error, "Unable to determine console mode (" + NativeMethods.Win32Error.GetText(error) + ").");
                 }
 
-                Git.Trace.WriteLine($"console mode = '{consoleMode}'.");
+                Trace.WriteLine($"console mode = '{consoleMode}'.");
 
                 // instruct the user as to what they are expected to do
                 buffer.Append(titleMessage)
@@ -546,7 +545,7 @@ namespace Microsoft.Alm.Cli
                         throw new Win32Exception(error, "Unable to set console mode (" + NativeMethods.Win32Error.GetText(error) + ").");
                     }
 
-                    Git.Trace.WriteLine($"console mode = '{consoleMode2}'.");
+                    Trace.WriteLine($"console mode = '{consoleMode2}'.");
 
                     // prompt the user for password
                     buffer.Append("password: ");
@@ -576,7 +575,7 @@ namespace Microsoft.Alm.Cli
                     // restore the console mode to its original value
                     NativeMethods.SetConsoleMode(stdin, consoleMode);
 
-                    Git.Trace.WriteLine($"console mode = '{consoleMode}'.");
+                    Trace.WriteLine($"console mode = '{consoleMode}'.");
                 }
 
                 if (username != null && password != null)
@@ -600,22 +599,22 @@ namespace Microsoft.Alm.Cli
                     : new AcquireCredentialsDelegate(Program.BasicCredentialPrompt);
 
             var bitbucketCredentialCallback = (operationArguments.UseModalUi)
-                    ? Bitbucket.AuthenticationPrompts.CredentialModalPrompt
-                    : new Bitbucket.Authentication.AcquireCredentialsDelegate(BitbucketCredentialPrompt);
+                    ? Atlassian.Bitbucket.Authentication.AuthenticationPrompts.CredentialModalPrompt
+                    : new Atlassian.Bitbucket.Authentication.Authentication.AcquireCredentialsDelegate(BitbucketCredentialPrompt);
 
             var bitbucketOauthCallback = (operationArguments.UseModalUi)
-                    ? Bitbucket.AuthenticationPrompts.AuthenticationOAuthModalPrompt
-                    : new Bitbucket.Authentication.AcquireAuthenticationOAuthDelegate(BitbucketOAuthPrompt);
+                    ? Atlassian.Bitbucket.Authentication.AuthenticationPrompts.AuthenticationOAuthModalPrompt
+                    : new Atlassian.Bitbucket.Authentication.Authentication.AcquireAuthenticationOAuthDelegate(BitbucketOAuthPrompt);
 
             NtlmSupport basicNtlmSupport = NtlmSupport.Auto;
 
             switch (operationArguments.Authority)
             {
                 case AuthorityType.Auto:
-                    Git.Trace.WriteLine($"detecting authority type for '{operationArguments.TargetUri}'.");
+                    Trace.WriteLine($"detecting authority type for '{operationArguments.TargetUri}'.");
 
                     // detect the authority
-                    authority = Bitbucket.Authentication.GetAuthentication(operationArguments.TargetUri,
+                    authority = Atlassian.Bitbucket.Authentication.Authentication.GetAuthentication(operationArguments.TargetUri,
                                                                           secrets,//new SecretStore(secretsNamespace, Secret.UriToActualUrl),
                                                                           bitbucketCredentialCallback,
                                                                           bitbucketOauthCallback);
@@ -623,7 +622,7 @@ namespace Microsoft.Alm.Cli
                     if (authority != null)
                     {
                         // set the authority type based on the returned value
-                        if (authority is Bitbucket.Authentication)
+                        if (authority is Atlassian.Bitbucket.Authentication.Authentication)
                         {
                             operationArguments.Authority = AuthorityType.Bitbucket;
                             goto case AuthorityType.Bitbucket;
@@ -637,10 +636,10 @@ namespace Microsoft.Alm.Cli
                     goto default;
 
                 case AuthorityType.Bitbucket:
-                    Git.Trace.WriteLine($"authority for '{operationArguments.TargetUri}'  is Bitbucket");
+                    Trace.WriteLine($"authority for '{operationArguments.TargetUri}'  is Bitbucket");
 
                     // return a Bitbucket authentication object
-                    return authority ?? new Bitbucket.Authentication(secrets,
+                    return authority ?? new Atlassian.Bitbucket.Authentication.Authentication(secrets,
                                                                      bitbucketCredentialCallback,
                                                                      bitbucketOauthCallback);
 
@@ -650,7 +649,7 @@ namespace Microsoft.Alm.Cli
                     goto default;
 
                 default:
-                    Git.Trace.WriteLine($"authority for '{operationArguments.TargetUri}' is basic with NTLM={basicNtlmSupport}.");
+                    Trace.WriteLine($"authority for '{operationArguments.TargetUri}' is basic with NTLM={basicNtlmSupport}.");
 
                     // return a generic username + password authentication object
                     return authority ?? new BasicAuthentication(secrets, basicNtlmSupport, basicCredentialCallback, null);
@@ -670,13 +669,13 @@ namespace Microsoft.Alm.Cli
             {
                 default:
                 case AuthorityType.Basic:
-                    Git.Trace.WriteLine($"deleting basic credentials for '{operationArguments.TargetUri}'.");
+                    Trace.WriteLine($"deleting basic credentials for '{operationArguments.TargetUri}'.");
                     authentication.DeleteCredentials(operationArguments.TargetUri);
                     break;
 
                 case AuthorityType.Bitbucket:
-                    Git.Trace.WriteLine($"deleting Bitbucket credentials for '{operationArguments.TargetUri}'.");
-                    var bbAuth = authentication as Bitbucket.Authentication;
+                    Trace.WriteLine($"deleting Bitbucket credentials for '{operationArguments.TargetUri}'.");
+                    var bbAuth = authentication as Atlassian.Bitbucket.Authentication.Authentication;
                     bbAuth.DeleteCredentials(operationArguments.TargetUri, operationArguments.CredUsername);
                     break;
             }
@@ -705,7 +704,7 @@ namespace Microsoft.Alm.Cli
             }
 
             // fake being part of the Main method for clarity
-            Git.Trace.WriteLine(builder.ToString(), memberName: nameof(Main));
+            Trace.WriteLine(builder.ToString(), memberName: nameof(Main));
             builder = null;
         }
 
@@ -714,41 +713,47 @@ namespace Microsoft.Alm.Cli
         {
             // use the stderr stream for the trace as stdout is used in the cross-process
             // communications protocol
-            Git.Trace.AddListener(Console.Error);
+            Trace.AddListener(Console.Error);
         }
 
         private static void EnableTraceLogging(OperationArguments operationArguments)
         {
             if (operationArguments.WriteLog)
             {
-                Git.Trace.WriteLine("trace logging enabled.");
+                Trace.WriteLine("trace logging enabled.");
 
-                string gitConfigPath;
-                if (Where.GitLocalConfig(out gitConfigPath))
+                List<string> gitConfigPaths;
+                if (Atlassian.Bitbucket.Alm.Mercurial.Where.MercurialLocalConfig(out gitConfigPaths))
                 {
-                    Git.Trace.WriteLine($"git local config found at '{gitConfigPath}'.");
-
-                    string gitDirPath = Path.GetDirectoryName(gitConfigPath);
-
-                    if (Directory.Exists(gitDirPath))
+                    gitConfigPaths.ForEach(c =>
                     {
-                        EnableTraceLogging(operationArguments, gitDirPath);
-                    }
+                        Trace.WriteLine($"git local config found at '{c}'.");
+
+                        string gitDirPath = Path.GetDirectoryName(c);
+
+                        if (Directory.Exists(gitDirPath))
+                        {
+                            EnableTraceLogging(operationArguments, gitDirPath);
+                        }
+                    });
                 }
-                else if (Where.GitGlobalConfig(out gitConfigPath))
+                else if (Atlassian.Bitbucket.Alm.Mercurial.Where.MercurialGlobalConfig(out gitConfigPaths))
                 {
-                    Git.Trace.WriteLine($"git global config found at '{gitConfigPath}'.");
-
-                    string homeDirPath = Path.GetDirectoryName(gitConfigPath);
-
-                    if (Directory.Exists(homeDirPath))
+                    gitConfigPaths.ForEach(c =>
                     {
-                        EnableTraceLogging(operationArguments, homeDirPath);
-                    }
+                       Trace.WriteLine($"git global config found at '{c}'.");
+
+                       string homeDirPath = Path.GetDirectoryName(c);
+
+                       if (Directory.Exists(homeDirPath))
+                       {
+                           EnableTraceLogging(operationArguments, homeDirPath);
+                       }
+                   });
                 }
             }
 #if DEBUG
-            Git.Trace.WriteLine($"GCM arguments:{Environment.NewLine}{operationArguments}");
+            Trace.WriteLine($"GCM arguments:{Environment.NewLine}{operationArguments}");
 #endif
         }
 
@@ -775,12 +780,12 @@ namespace Microsoft.Alm.Cli
                 }
             }
 
-            Git.Trace.WriteLine($"trace log destination is '{logFilePath}'.");
+            Trace.WriteLine($"trace log destination is '{logFilePath}'.");
 
             using (var fileStream = File.Open(logFileName, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
             {
                 var listener = new StreamWriter(fileStream, Encoding.UTF8);
-                Git.Trace.AddListener(listener);
+                Trace.AddListener(listener);
 
                 // write a small header to help with identifying new log entries
                 listener.Write('\n');
@@ -805,7 +810,7 @@ namespace Microsoft.Alm.Cli
             return false;
         }
 
-        private static bool BitbucketOAuthPrompt(string title, TargetUri targetUri, Bitbucket.AuthenticationResultType resultType, string username)
+        private static bool BitbucketOAuthPrompt(string title, TargetUri targetUri, Atlassian.Bitbucket.Authentication.AuthenticationResultType resultType, string username)
         {
             const int BufferReadSize = 16 * 1024;
 
@@ -967,7 +972,7 @@ namespace Microsoft.Alm.Cli
                 if (inBufferSize <= 0)
                 {
                     error = Marshal.GetLastWin32Error();
-                    Git.Trace.WriteLine($"unable to determine credential buffer size ('{NativeMethods.Win32Error.GetText(error)}').");
+                    Trace.WriteLine($"unable to determine credential buffer size ('{NativeMethods.Win32Error.GetText(error)}').");
 
                     return null;
                 }
@@ -981,7 +986,7 @@ namespace Microsoft.Alm.Cli
                                                                 packedCredentialsSize: ref inBufferSize))
                 {
                     error = Marshal.GetLastWin32Error();
-                    Git.Trace.WriteLine($"unable to write to credential buffer ('{NativeMethods.Win32Error.GetText(error)}').");
+                    Trace.WriteLine($"unable to write to credential buffer ('{NativeMethods.Win32Error.GetText(error)}').");
 
                     return null;
                 }
@@ -1039,7 +1044,7 @@ namespace Microsoft.Alm.Cli
                 goto parse_localval;
             }
 
-            var config = operationArguments.GitConfiguration;
+            var config = operationArguments.MercurialConfiguration;
 
             // look for an entry in the git config
             Configuration.Entry entry;
@@ -1100,7 +1105,7 @@ namespace Microsoft.Alm.Cli
                 return true;
             }
 
-            var config = operationArguments.GitConfiguration;
+            var config = operationArguments.MercurialConfiguration;
 
             // look for an entry in the git config
             Configuration.Entry entry;
@@ -1143,7 +1148,7 @@ namespace Microsoft.Alm.Cli
                                                                              saveCredentials: ref saveCredentials,
                                                                              flags: flags)) != NativeMethods.Win32Error.Success)
                 {
-                    Git.Trace.WriteLine($"credential prompt failed ('{NativeMethods.Win32Error.GetText(error)}').");
+                    Trace.WriteLine($"credential prompt failed ('{NativeMethods.Win32Error.GetText(error)}').");
 
                     username = null;
                     password = null;
@@ -1174,12 +1179,12 @@ namespace Microsoft.Alm.Cli
                     password = null;
 
                     error = Marshal.GetLastWin32Error();
-                    Git.Trace.WriteLine($"failed to unpack buffer ('{NativeMethods.Win32Error.GetText(error)}').");
+                    Trace.WriteLine($"failed to unpack buffer ('{NativeMethods.Win32Error.GetText(error)}').");
 
                     return false;
                 }
 
-                Git.Trace.WriteLine("successfully acquired credentials from user.");
+                Trace.WriteLine("successfully acquired credentials from user.");
 
                 username = usernameBuffer.ToString();
                 password = passwordBuffer.ToString();

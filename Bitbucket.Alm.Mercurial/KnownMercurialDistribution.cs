@@ -23,14 +23,13 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
 **/
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-
-namespace Microsoft.Alm.Git
+namespace Atlassian.Bitbucket.Alm.Mercurial
 {
-    public class Trace : Microsoft.Alm.Trace
+    public enum KnownMercurialDistribution
     {
+        /// <summary>
+        /// Mercurial v4
+        /// </summary>
+        Mercurialv4,
     }
 }

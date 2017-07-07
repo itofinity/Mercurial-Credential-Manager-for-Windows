@@ -30,6 +30,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Alm.Authentication;
+using Atlassian.Bitbucket.Alm.Mercurial;
 
 namespace Microsoft.Alm.Cli
 {
@@ -109,7 +110,7 @@ namespace Microsoft.Alm.Cli
 
             if (match.Success)
             {
-                Git.Trace.WriteLine("querying for passphrase key.");
+                Trace.WriteLine("querying for passphrase key.");
 
                 if (match.Groups.Count < 2)
                     throw new ArgumentException("Unable to understand command.");
@@ -117,7 +118,7 @@ namespace Microsoft.Alm.Cli
                 // string request = match.Groups[0].Value;
                 string resource = match.Groups[1].Value;
 
-                Git.Trace.WriteLine($"open dialog for '{resource}'.");
+                Trace.WriteLine($"open dialog for '{resource}'.");
 
                 System.Windows.Application application = new System.Windows.Application();
                 Gui.UserPromptDialog prompt = new Gui.UserPromptDialog(promptKind, resource);
@@ -127,7 +128,7 @@ namespace Microsoft.Alm.Cli
                 {
                     string passphase = prompt.Response;
 
-                    Git.Trace.WriteLine("passphase acquired.");
+                    Trace.WriteLine("passphase acquired.");
 
                     Console.Out.Write(passphase + "\n");
                     return;
@@ -138,7 +139,7 @@ namespace Microsoft.Alm.Cli
 
             if ((match = AskCredentialRegex.Match(args[0])).Success)
             {
-                Git.Trace.WriteLine("querying for basic credentials.");
+                Trace.WriteLine("querying for basic credentials.");
 
                 if (match.Groups.Count < 3)
                     throw new ArgumentException("Unable to understand command.");
@@ -149,7 +150,7 @@ namespace Microsoft.Alm.Cli
                 // Since we're looking for HTTP(s) credentials, we can use NetFx `Uri` class.
                 if (Uri.TryCreate(targetUrl, UriKind.Absolute, out Uri targetUri))
                 {
-                    Git.Trace.WriteLine($"success parsing URL, targetUri = '{targetUri}'.");
+                    Trace.WriteLine($"success parsing URL, targetUri = '{targetUri}'.");
 
                     if (TryParseUrlCredentials(targetUrl, out string username, out string password))
                     {
@@ -196,7 +197,7 @@ namespace Microsoft.Alm.Cli
 
                     if (Uri.TryCreate(targetUrl, UriKind.Absolute, out targetUri))
                     {
-                        Git.Trace.WriteLine($"success parsing URL, targetUri = '{targetUri}'.");
+                        Trace.WriteLine($"success parsing URL, targetUri = '{targetUri}'.");
 
                         OperationArguments operationArguments = new OperationArguments.Impl(targetUri);
                         operationArguments.SetCredentials(username, password);
@@ -210,7 +211,7 @@ namespace Microsoft.Alm.Cli
                         {
                             if (seeking.Equals("Username", StringComparison.OrdinalIgnoreCase))
                             {
-                                Git.Trace.WriteLine($"username for '{targetUrl}' asked for and found.");
+                                Trace.WriteLine($"username for '{targetUrl}' asked for and found.");
 
                                 Console.Out.Write(credentials.Username + '\n');
                                 return;
@@ -218,7 +219,7 @@ namespace Microsoft.Alm.Cli
 
                             if (seeking.Equals("Password", StringComparison.OrdinalIgnoreCase))
                             {
-                                Git.Trace.WriteLine($"password for '{targetUrl}' asked for and found.");
+                                Trace.WriteLine($"password for '{targetUrl}' asked for and found.");
 
                                 Console.Out.Write(credentials.Password + '\n');
                                 return;
@@ -226,18 +227,18 @@ namespace Microsoft.Alm.Cli
                         }
                         else
                         {
-                            Git.Trace.WriteLine($"user cancelled credential dialog.");
+                            Trace.WriteLine($"user cancelled credential dialog.");
                             return;
                         }
                     }
                     else
                     {
-                        Git.Trace.WriteLine("error: unable to parse target URL.");
+                        Trace.WriteLine("error: unable to parse target URL.");
                     }
                 }
                 else
                 {
-                    Git.Trace.WriteLine("error: unable to parse supplied URL.");
+                    Trace.WriteLine("error: unable to parse supplied URL.");
                 }
 
                 Die($"failed to detect {seeking} in target URL.");
@@ -248,7 +249,7 @@ namespace Microsoft.Alm.Cli
                 string host = match.Groups[1].Value;
                 string fingerprint = match.Groups[2].Value;
 
-                Git.Trace.WriteLine($"requesting authorization to add {host} ({fingerprint}) to known hosts.");
+                Trace.WriteLine($"requesting authorization to add {host} ({fingerprint}) to known hosts.");
 
                 System.Windows.Application application = new System.Windows.Application();
                 Gui.UserPromptDialog prompt = new Gui.UserPromptDialog(host, fingerprint);
@@ -256,12 +257,12 @@ namespace Microsoft.Alm.Cli
 
                 if (prompt.Failed)
                 {
-                    Git.Trace.WriteLine("denied authorization of host.");
+                    Trace.WriteLine("denied authorization of host.");
                     Console.Out.Write("no\n");
                 }
                 else
                 {
-                    Git.Trace.WriteLine("approved authorization of host.");
+                    Trace.WriteLine("approved authorization of host.");
                     Console.Out.Write("yes\n");
                 }
 
@@ -317,8 +318,8 @@ namespace Microsoft.Alm.Cli
 
             Console.Out.WriteLine("usage: git askpass '<user_prompt_text>'");
 
-            List<Git.GitInstallation> installations;
-            if (Git.Where.FindGitInstallations(out installations))
+            List<MercurialInstallation> installations;
+            if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
             {
                 foreach (var installation in installations)
                 {
@@ -329,7 +330,7 @@ namespace Microsoft.Alm.Cli
                         // if the help file exists, send it to the operating system to display to the user
                         if (File.Exists(doc))
                         {
-                            Git.Trace.WriteLine($"opening help documentation '{doc}'.");
+                            Trace.WriteLine($"opening help documentation '{doc}'.");
 
                             Process.Start(doc);
 

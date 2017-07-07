@@ -30,6 +30,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
+using Atlassian.Bitbucket.Alm.Mercurial;
+using Where = Atlassian.Bitbucket.Alm.Mercurial.Where;
 
 namespace Microsoft.Alm.Cli
 {
@@ -80,12 +82,12 @@ namespace Microsoft.Alm.Cli
             {
                 if (!StandardInputIsTty)
                 {
-                    Git.Trace.WriteLine("standard input is not TTY, abandoning prompt.");
+                    Trace.WriteLine("standard input is not TTY, abandoning prompt.");
 
                     return;
                 }
 
-                Git.Trace.WriteLine("prompting user for url.");
+                Trace.WriteLine("prompting user for url.");
 
                 Program.WriteLine(" Target Url:");
                 url = Console.In.ReadLine();
@@ -103,7 +105,7 @@ namespace Microsoft.Alm.Cli
             Uri uri;
             if (Uri.TryCreate(url, UriKind.Absolute, out uri))
             {
-                Git.Trace.WriteLine($"converted '{url}' to '{uri.AbsoluteUri}'.");
+                Trace.WriteLine($"converted '{url}' to '{uri.AbsoluteUri}'.");
 
                 OperationArguments operationArguments = new OperationArguments.Impl(uri);
 
@@ -112,11 +114,11 @@ namespace Microsoft.Alm.Cli
 
                 if (operationArguments.PreserveCredentials && !forced)
                 {
-                    Git.Trace.WriteLine("attempting to delete preserved credentials without force, prompting user for interactivity.");
+                    Trace.WriteLine("attempting to delete preserved credentials without force, prompting user for interactivity.");
 
                     if (!StandardInputIsTty || !StandardErrorIsTty)
                     {
-                        Git.Trace.WriteLine("standard input is not TTY, abandoning prompt.");
+                        Trace.WriteLine("standard input is not TTY, abandoning prompt.");
                         return;
                     }
 
@@ -137,7 +139,7 @@ namespace Microsoft.Alm.Cli
             }
             else
             {
-                Git.Trace.WriteLine($"unable to parse input '{url}'.");
+                Trace.WriteLine($"unable to parse input '{url}'.");
             }
         }
 
@@ -177,15 +179,15 @@ namespace Microsoft.Alm.Cli
                 {
                     default:
                     case AuthorityType.Basic:
-                        Git.Trace.WriteLine($"deleting basic credentials for '{operationArguments.TargetUri}'.");
+                        Trace.WriteLine($"deleting basic credentials for '{operationArguments.TargetUri}'.");
                         break;
 
                     case AuthorityType.Ntlm:
-                        Git.Trace.WriteLine($"deleting NTLM credentials for '{operationArguments.TargetUri}'.");
+                        Trace.WriteLine($"deleting NTLM credentials for '{operationArguments.TargetUri}'.");
                         break;
 
                     case AuthorityType.Bitbucket:
-                        Git.Trace.WriteLine($"deleting Bitbucket credentials for '{operationArguments.CredUsername}@{operationArguments.TargetUri}'.");
+                        Trace.WriteLine($"deleting Bitbucket credentials for '{operationArguments.CredUsername}@{operationArguments.TargetUri}'.");
                         break;
                 }
 
@@ -203,7 +205,7 @@ namespace Microsoft.Alm.Cli
             var installer = new Installer();
             installer.DeployConsole();
 
-            Git.Trace.WriteLine($"Installer result = '{installer.Result}', exit code = {installer.ExitCode}.");
+            Trace.WriteLine($"Installer result = '{installer.Result}', exit code = {installer.ExitCode}.");
 
             Program.Exit(installer.ExitCode);
         }
@@ -225,7 +227,7 @@ namespace Microsoft.Alm.Cli
 
                 if (operationArguments.PreserveCredentials)
                 {
-                    Git.Trace.WriteLine($"{ConfigPreserveCredentialsKey} = true, canceling erase request.");
+                    Trace.WriteLine($"{ConfigPreserveCredentialsKey} = true, canceling erase request.");
                     return;
                 }
 
@@ -326,8 +328,8 @@ namespace Microsoft.Alm.Cli
 
             Program.WriteLine("usage: git credential-manager [" + string.Join("|", CommandList) + "] [<args>]");
 
-            List<Git.GitInstallation> installations;
-            if (Git.Where.FindGitInstallations(out installations))
+            List<MercurialInstallation> installations;
+            if (Atlassian.Bitbucket.Alm.Mercurial.Where.FindMercurialInstallations(out installations))
             {
                 foreach (var installation in installations)
                 {
@@ -338,7 +340,7 @@ namespace Microsoft.Alm.Cli
                         // if the help file exists, send it to the operating system to display to the user
                         if (File.Exists(doc))
                         {
-                            Git.Trace.WriteLine($"opening help documentation '{doc}'.");
+                            Trace.WriteLine($"opening help documentation '{doc}'.");
 
                             Process.Start(doc);
 
@@ -356,7 +358,7 @@ namespace Microsoft.Alm.Cli
             var installer = new Installer();
             installer.RemoveConsole();
 
-            Git.Trace.WriteLine($"Installer result = {installer.Result}, exit code = {installer.ExitCode}.");
+            Trace.WriteLine($"Installer result = {installer.Result}, exit code = {installer.ExitCode}.");
 
             Program.Exit(installer.ExitCode);
         }
@@ -385,11 +387,11 @@ namespace Microsoft.Alm.Cli
                 {
                     default:
                     case AuthorityType.Basic:
-                        Git.Trace.WriteLine($"storing basic credentials for '{operationArguments.TargetUri}'.");
+                        Trace.WriteLine($"storing basic credentials for '{operationArguments.TargetUri}'.");
                         break;
 
                     case AuthorityType.Ntlm:
-                        Git.Trace.WriteLine($"storing NTLM credentials for '{operationArguments.TargetUri}'.");
+                        Trace.WriteLine($"storing NTLM credentials for '{operationArguments.TargetUri}'.");
                         break;
                 }
 

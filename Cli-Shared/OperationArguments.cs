@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Alm.Authentication;
+using Atlassian.Bitbucket.Alm.Mercurial;
 
 namespace Microsoft.Alm.Cli
 {
@@ -67,7 +68,7 @@ namespace Microsoft.Alm.Cli
         /// Gets the process's Git configuration based on current working directory, user's folder,
         /// and Git's system directory.
         /// </summary>
-        public virtual Git.Configuration GitConfiguration
+        public virtual Configuration MercurialConfiguration
         {
             get => throw new NotImplementedException();
         }
@@ -304,7 +305,7 @@ namespace Microsoft.Alm.Cli
             }
 
             private AuthorityType _authorityType;
-            private Git.Configuration _configuration;
+            private Configuration _configuration;
             private string _customNamespace;
             private Dictionary<string, string> _environmentVariables;
             private Interactivity _interactivity;
@@ -359,7 +360,7 @@ namespace Microsoft.Alm.Cli
                 }
             }
 
-            public sealed override Git.Configuration GitConfiguration
+            public sealed override Configuration MercurialConfiguration
             {
                 get
                 {
@@ -491,7 +492,7 @@ namespace Microsoft.Alm.Cli
 
             public sealed override void LoadConfiguration()
             {
-                _configuration = Git.Configuration.ReadConfiuration(Environment.CurrentDirectory, UseConfigLocal, UseConfigSystem);
+                _configuration = Configuration.ReadConfiguration(Environment.CurrentDirectory, UseConfigLocal, UseConfigSystem);
             }
 
             public sealed override void SetCredentials(Credential credentials)
@@ -507,16 +508,16 @@ namespace Microsoft.Alm.Cli
                 Uri tmp = null;
                 if (Uri.TryCreate(url, UriKind.Absolute, out tmp))
                 {
-                    Git.Trace.WriteLine($"successfully set proxy to '{tmp.AbsoluteUri}'.");
+                    Trace.WriteLine($"successfully set proxy to '{tmp.AbsoluteUri}'.");
                 }
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(url))
                     {
-                        Git.Trace.WriteLine($"failed to parse '{url}'.");
+                        Trace.WriteLine($"failed to parse '{url}'.");
                     }
 
-                    Git.Trace.WriteLine("proxy cleared.");
+                    Trace.WriteLine("proxy cleared.");
                 }
                 this.ProxyUri = tmp;
             }

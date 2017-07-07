@@ -24,13 +24,29 @@
 **/
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
-namespace Microsoft.Alm.Git
+namespace Atlassian.Bitbucket.Alm.Mercurial
 {
-    public class Trace : Microsoft.Alm.Trace
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1714:FlagsEnumsShouldHavePluralNames")]
+    [Flags]
+    public enum ConfigurationLevel
     {
+        None = 0,
+
+        Portable = 1 << 0,
+        System = 1 << 1,
+        Xdg = 1 << 2,
+        Global = 1 << 3,
+        Local = 1 << 4,
+
+        All = Portable
+            | System
+            | Xdg
+            | Global
+            | Local,
+
+        NoLocal = All & ~Local,
+        NoSystem = All & ~(Portable | System),
+        UserOnly = All & ~(Portable | System | Local)
     }
 }

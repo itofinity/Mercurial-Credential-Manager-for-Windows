@@ -76,6 +76,10 @@
       <Project>{19770407-5c58-406d-ab3f-3700bb0d06fe}</Project>
       <Name>Microsoft.Alm.Git</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Alm\Microsoft.Alm.csproj">
+      <Project>{DBFD1CDF-F392-493D-8F2A-4F701B374DB1}</Project>
+      <Name>Microsoft.Alm</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

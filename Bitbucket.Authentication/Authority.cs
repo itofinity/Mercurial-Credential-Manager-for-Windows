@@ -30,7 +30,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
-using Trace = Microsoft.Alm.Git.Trace;
+using Trace = Microsoft.Alm.Trace;
 
 namespace Atlassian.Bitbucket.Authentication
 {

@@ -41,7 +41,7 @@ namespace Microsoft.Alm
 
     public class Trace: ITrace, IDisposable
     {
-        public const string EnvironmentVariableKey = "HGCM_TRACE";
+        public const string EnvironmentVariableKey = "MCM_TRACE";
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected Trace()

@@ -33,18 +33,18 @@ namespace Microsoft.Alm.Cli
         internal static readonly StringComparer ConfigKeyComparer = StringComparer.OrdinalIgnoreCase;
         internal static readonly StringComparer ConfigValueComparer = StringComparer.OrdinalIgnoreCase;
 
-        internal const string EnvironAuthorityKey = "HGCM_AUTHORITY";
-        internal const string EnvironConfigNoLocalKey = "HGCM_CONFIG_NOLOCAL";
-        internal const string EnvironConfigNoSystemKey = "HGCM_CONFIG_NOSYSTEM";
-        internal const string EnvironHttpProxyKey = "HGCM_HTTP_PROXY";
-        internal const string EnvironHttpUserAgent = "HGCM_HTTP_USER_AGENT";
-        internal const string EnvironInteractiveKey = "HGCM_INTERACTIVE";
-        internal const string EnvironLoginHintKey = "HGCM_LOGINHINT";
-        internal const string EnvironModalPromptKey = "HGCM_MODAL_PROMPT";
-        internal const string EnvironNamespaceKey = "HGCM_NAMESPACE";
-        internal const string EnvironPreserveCredentialsKey = "HGCM_PRESERVE_CREDS";
-        internal const string EnvironValidateKey = "HGCM_VALIDATE";
-        internal const string EnvironWritelogKey = "HGCM_WRITELOG";
+        internal const string EnvironAuthorityKey = "MCM_AUTHORITY";
+        internal const string EnvironConfigNoLocalKey = "MCM_CONFIG_NOLOCAL";
+        internal const string EnvironConfigNoSystemKey = "MCM_CONFIG_NOSYSTEM";
+        internal const string EnvironHttpProxyKey = "MCM_HTTP_PROXY";
+        internal const string EnvironHttpUserAgent = "MCM_HTTP_USER_AGENT";
+        internal const string EnvironInteractiveKey = "MCM_INTERACTIVE";
+        internal const string EnvironLoginHintKey = "MCM_LOGINHINT";
+        internal const string EnvironModalPromptKey = "MCM_MODAL_PROMPT";
+        internal const string EnvironNamespaceKey = "MCM_NAMESPACE";
+        internal const string EnvironPreserveCredentialsKey = "MCM_PRESERVE_CREDS";
+        internal const string EnvironValidateKey = "MCM_VALIDATE";
+        internal const string EnvironWritelogKey = "MCM_WRITELOG";
 
         internal const string EnvironConfigTraceKey = Trace.EnvironmentVariableKey;
 

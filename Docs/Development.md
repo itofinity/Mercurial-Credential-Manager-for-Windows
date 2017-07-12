@@ -1,6 +1,6 @@
 # Development and Debugging
 
-**__NEEDS UPDATING OR MCM__**
+**__NEEDS UPDATING FOR MCM__**
 
 Developing for GCM and/or Askpass requires Visual Studio 2015 or newer, any version (including the free [Community Edition](https://www.visualstudio.com/products/visual-studio-community-vs)).
 

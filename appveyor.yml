@@ -44,5 +44,5 @@ matrix:
   fast_finish: true
 
 on_success:
-  - ps : .\tag-repository.ps1
+  - ps : .\appveyor-tag-repository.ps1
 

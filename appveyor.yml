@@ -25,41 +25,6 @@ assembly_info:
   assembly_file_version: '{version}'
   assembly_informational_version: '{version}-beta'
 
-assembly_info:
-  patch: true
-  file: .\Cli-Askpass\Properties\AssemblyInfo.cs
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
-
-assembly_info:
-  patch: true
-  file: .\Microsoft.Alm\Properties\AssemblyInfo.cs
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
-
-assembly_info:
-  patch: true
-  file: .\Bitbucket.Alm.Mercurial\Properties\AssemblyInfo.cs
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
-
-assembly_info:
-  patch: true
-  file: .\Bitbucket.Authentication\Properties\AssemblyInfo.cs
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
-
-assembly_info:
-  patch: true
-  file: .\Bitbucket.Authentication.Test\Properties\AssemblyInfo.cs
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
-
 build_script:
   - msbuild "MercurialCredentialManager.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /consoleloggerparameters:Verbosity=minimal /maxcpucount /nodeReuse:true /target:"Build" /property:Configuration="%configuration%";Platform="%platform%";RunCodeAnalysis=true
 

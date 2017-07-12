@@ -1,6 +1,12 @@
-version: "{build}"
+version: '1.0.{build}'
 
 clone_depth: 10
+
+environment:
+    GitEmail: minns@atlassian.com
+    GitUsername: mminns
+    GitPassword: 
+      secure: llJK+loB9xZZFBdNyNbh+A==
 
 configuration:
   - Release
@@ -12,8 +18,55 @@ platform: Any CPU
 before_build:
   - nuget restore
 
+assembly_info:
+  patch: true
+  file: .\Cli-CredentialHelper\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
+assembly_info:
+  patch: true
+  file: .\Cli-Askpass\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
+assembly_info:
+  patch: true
+  file: .\Microsoft.Alm\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
+assembly_info:
+  patch: true
+  file: .\Bitbucket.Alm.Mercurial\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
+assembly_info:
+  patch: true
+  file: .\Bitbucket.Authentication\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
+assembly_info:
+  patch: true
+  file: .\Bitbucket.Authentication.Test\Properties\AssemblyInfo.cs
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}-beta'
+
 build_script:
   - msbuild "MercurialCredentialManager.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /consoleloggerparameters:Verbosity=minimal /maxcpucount /nodeReuse:true /target:"Build" /property:Configuration="%configuration%";Platform="%platform%";RunCodeAnalysis=true
+
+artifacts:
+  - path: Deploy\mercurial_credential_manager
+    name: mcmw-v{version}-beta.zip
+    type: zip
 
 test:
   assemblies:
@@ -24,3 +77,7 @@ cache:
 
 matrix:
   fast_finish: true
+
+  on_success:
+  - ps : .\tag-repository.ps1
+

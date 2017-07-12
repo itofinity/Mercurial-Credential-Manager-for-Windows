@@ -9,6 +9,7 @@ environment:
     GitPassword: 
       secure: /GXo1m4yXO8eIbjXBMBOVkC5d05AvG0/+03CmoHZBlsoPp3mnSwDXKLA6CpKNAs3
 
+skip_tags: true
 skip_commits:
   author: ci
 
@@ -24,7 +25,7 @@ before_build:
 
 assembly_info:
   patch: true
-  file: .\McmAssemblyInfo.cs
+  file: C:\projects\mercurial-credential-manager-for-windows\McmAssemblyInfo.cs
   assembly_version: '{version}'
   assembly_file_version: '{version}'
   assembly_informational_version: '{version}-beta'

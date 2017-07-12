@@ -26,7 +26,7 @@ before_build:
 
 assembly_info:
   patch: true
-  file: C:\\projects\\mercurial-credential-manager-for-windows\\McmAssemblyInfo.cs
+  file: McmAssemblyInfo.cs
   assembly_version: '{version}'
   assembly_file_version: '{version}'
   assembly_informational_version: '{version}-beta'

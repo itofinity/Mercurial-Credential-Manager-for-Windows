@@ -1,4 +1,4 @@
-version: '1.0.{build}'
+version: '1.11.{build}'
 
 clone_depth: 10
 
@@ -6,7 +6,7 @@ environment:
     GitEmail: minns@atlassian.com
     GitUsername: mminns
     GitPassword: 
-      secure: llJK+loB9xZZFBdNyNbh+A==
+      secure: /GXo1m4yXO8eIbjXBMBOVkC5d05AvG0/+03CmoHZBlsoPp3mnSwDXKLA6CpKNAs3
 
 configuration:
   - Release

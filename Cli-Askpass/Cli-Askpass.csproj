@@ -65,6 +65,9 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\McmAssemblyInfo.cs">
+      <Link>Properties\McmAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="UserPromptDialog.xaml.cs">
       <DependentUpon>UserPromptDialog.xaml</DependentUpon>

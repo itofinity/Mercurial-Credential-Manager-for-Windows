@@ -20,7 +20,7 @@ before_build:
 
 assembly_info:
   patch: true
-  file: .\Cli-CredentialHelper\Properties\AssemblyInfo.cs
+  file: .\McmAssemblyInfo.cs
   assembly_version: '{version}'
   assembly_file_version: '{version}'
   assembly_informational_version: '{version}-beta'

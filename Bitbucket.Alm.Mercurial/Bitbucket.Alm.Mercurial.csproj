@@ -41,6 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\McmAssemblyInfo.cs">
+      <Link>Properties\McmAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Configuration.cs" />
     <Compile Include="ConfigurationLevel.cs" />
     <Compile Include="IniFile.cs" />

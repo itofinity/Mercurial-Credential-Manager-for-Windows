@@ -3,10 +3,14 @@ version: '1.11.{build}'
 clone_depth: 10
 
 environment:
-    GitEmail: minns@atlassian.com
+    GitEmail: ci@appveyor.com
+    GitAuthor: ci
     GitUsername: mminns
     GitPassword: 
       secure: /GXo1m4yXO8eIbjXBMBOVkC5d05AvG0/+03CmoHZBlsoPp3mnSwDXKLA6CpKNAs3
+
+skip_commits:
+  author: ci
 
 configuration:
   - Release

@@ -1,5 +1,5 @@
 git config --global user.email "$($env:GitEmail)"
-git config --global user.name "$($env:GitUsername)"
+git config --global user.name "$($env:GitAuthor)"
 git config --global credential.helper store
 
 Add-Content "$env:USERPROFILE\.git-credentials" "https://$($env:GitUsername):$($env:GitPassword)@github.com`n"

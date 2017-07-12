@@ -1,5 +1,7 @@
 # Bitbucket Authentication, 2FA and OAuth
 
+**_NEEDS UPDATING FOR MCM_**
+
 By default for authenticating against private Git repositories Bitbucket supports SSH and username/password Basic Auth over HTTPS. Username/password Basic Auth over HTTPS is also available for REST api access. Additionally Bitbucket supports App-specific passwords which can be used via Basic Auth as username/app-pecific-password.
 
 To enhance security Bitbucket offers optional Two-Factor Authentication (2FA). When 2FA is enabled username/password Basic Auth access to the REST APIs and to Git repositories is suspended. At that point users are left with the choice of username/apps-pecific-password Basic Auth for REST APIs and Git interactions, OAuth for REST APIs and Git/Hg interactions or SSH for Git/HG interactions and one of the previous choices for REST APIs. SSH and REST API access are beyond the scope of this document. Follow this like to read about Bitbucket's 2FA implementation https://confluence.atlassian.com/bitbucket/two-step-verification-777023203.html

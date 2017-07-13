@@ -29,14 +29,14 @@ assembly_info:
   file: McmAssemblyInfo.cs
   assembly_version: '{version}'
   assembly_file_version: '{version}'
-  assembly_informational_version: '{version}-beta'
+  assembly_informational_version: '{version}-{branch}'
 
 build_script:
   - msbuild "MercurialCredentialManager.sln" /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /consoleloggerparameters:Verbosity=minimal /maxcpucount /nodeReuse:true /target:"Build" /property:Configuration="%configuration%";Platform="%platform%";RunCodeAnalysis=true
 
 artifacts:
   - path: Deploy\mercurial_credential_manager
-    name: mcmw-v$(appveyor_build_version)-beta
+    name: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)
     type: zip
 
 test:
@@ -53,12 +53,12 @@ on_success:
   - ps : .\appveyor-tag-repository.ps1
 
 deploy:
-  release: mcmw-v$(appveyor_build_version)-beta
-  description: 'Mercurial Credential Manager for Windows Release'
+  release: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)
+  description: 'Mercurial Credential Manager for Windows $(appveyor_build_branch) Release'
   provider: GitHub
   auth_token:
     secure: /GXo1m4yXO8eIbjXBMBOVkC5d05AvG0/+03CmoHZBlsoPp3mnSwDXKLA6CpKNAs3 # your encrypted token from GitHub
-  artifact: mcmw-v$(appveyor_build_version)-beta           # upload all NuGet packages to release assets
+  artifact: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)           # upload all NuGet packages to release assets
   #draft: false
   prerelease: true
   #on:

@@ -36,11 +36,8 @@ build_script:
 
 artifacts:
   - path: Deploy\mercurial_credential_manager
-    name: mcmw-v$(appveyor_build_version)-$(appveyor_repo_branch)
-    type: zip
-
-  - path: Deploy\mcmw-v$(appveyor_build_version)-$(appveyor_repo_branch).zip
     name: mcmw-v$(appveyor_build_version)
+    type: zip
 
 
 test:

@@ -36,7 +36,7 @@ build_script:
 
 artifacts:
   - path: Deploy\mercurial_credential_manager
-    name: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)
+    name: mcmw-v$(appveyor_build_version)-$(appveyor_repo_branch)
     type: zip
 
 test:
@@ -53,12 +53,12 @@ on_success:
   - ps : .\appveyor-tag-repository.ps1
 
 deploy:
-  release: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)
-  description: 'Mercurial Credential Manager for Windows $(appveyor_build_branch) Release'
+  release: mcmw-v$(appveyor_build_version)-$(appveyor_repo_branch)
+  description: 'Mercurial Credential Manager for Windows $(appveyor_repo_branch) Release'
   provider: GitHub
   auth_token:
     secure: /GXo1m4yXO8eIbjXBMBOVkC5d05AvG0/+03CmoHZBlsoPp3mnSwDXKLA6CpKNAs3 # your encrypted token from GitHub
-  artifact: mcmw-v$(appveyor_build_version)-$(appveyor_build_branch)           # upload all NuGet packages to release assets
+  artifact: mcmw-v$(appveyor_build_version)-$(appveyor_repo_branch)           # upload all NuGet packages to release assets
   #draft: false
   prerelease: true
   #on:

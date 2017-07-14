@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Atlassian.Bitbucket.Alm.Mercurial;
+using System.Linq;
 
 namespace Microsoft.Alm.Cli
 {
@@ -591,7 +593,7 @@ namespace Microsoft.Alm.Cli
             Debug.Assert(operationArguments.TargetUri != null, "The operationArgument.TargetUri is null");
 
             var secretsNamespace = operationArguments.CustomNamespace ?? SecretsNamespace;
-            var secrets = new SecretStore(secretsNamespace, null, null, new List<Secret.UriNameConversion>() { Secret.UriToActualUrl, Secret.UriToMercurialKeyringNamePerRepository, Secret.UriToMercurialKeyringNamePerHost });
+            var secrets = new SecretStore(secretsNamespace, null, null, GetStorageFormats());
             BaseAuthentication authority = null;
 
             var basicCredentialCallback = (operationArguments.UseModalUi)
@@ -654,6 +656,37 @@ namespace Microsoft.Alm.Cli
                     // return a generic username + password authentication object
                     return authority ?? new BasicAuthentication(secrets, basicNtlmSupport, basicCredentialCallback, null);
             }
+        }
+
+        private static List<Secret.UriNameConversion> GetStorageFormats()
+        {
+            var formats = new List<Secret.UriNameConversion>();
+            var storageFormatsSetting = System.Configuration.ConfigurationManager.AppSettings["StorageFormats"];
+            if (string.IsNullOrWhiteSpace(storageFormatsSetting))
+            {
+                formats.Add(Secret.UriToActualUrl);
+            }
+            else
+            {
+                var storageFormats = storageFormatsSetting.Split(';');
+
+                if (storageFormats.Contains("UriToActualUrl"))
+                {
+                    formats.Add(Secret.UriToActualUrl);
+                }
+
+                if (storageFormats.Contains("UriToMercurialKeyringNamePerRepository"))
+                {
+                    formats.Add(Secret.UriToMercurialKeyringNamePerRepository);
+                }
+
+                if (storageFormats.Contains("UriToMercurialKeyringNamePerHost"))
+                {
+                    formats.Add(Secret.UriToMercurialKeyringNamePerHost);
+                }
+            }
+
+            return formats;
         }
 
         internal static void DeleteCredentials(OperationArguments operationArguments)

@@ -8,9 +8,11 @@ using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq.Expressions;
 using Atlassian.Bitbucket.Alm.Mercurial;
 using System.Linq;
+using System.Net;
 
 namespace Microsoft.Alm.Cli
 {
@@ -609,6 +611,8 @@ namespace Microsoft.Alm.Cli
                     : new Atlassian.Bitbucket.Authentication.Authentication.AcquireAuthenticationOAuthDelegate(BitbucketOAuthPrompt);
 
             NtlmSupport basicNtlmSupport = NtlmSupport.Auto;
+
+            ServicePointManager.SecurityProtocol = ServicePointManager.SecurityProtocol | SecurityProtocolType.Tls12;
 
             switch (operationArguments.Authority)
             {

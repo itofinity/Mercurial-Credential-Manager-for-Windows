@@ -728,6 +728,8 @@ namespace Microsoft.Alm.Cli
 
             NtlmSupport basicNtlmSupport = NtlmSupport.Auto;
 
+            ServicePointManager.SecurityProtocol = ServicePointManager.SecurityProtocol | SecurityProtocolType.Tls12;
+
             switch (operationArguments.Authority)
             {
                 case AuthorityType.Auto:

@@ -119,7 +119,7 @@ namespace Microsoft.Alm.Authentication
                 // if the headers contain NTML as an option, then fall back to NTLM
                 if (_httpAuthenticateOptions.Any(x => WwwAuthenticateHelper.IsNtlm(x)))
                 {
-                    Git.Trace.WriteLine($"'{targetUri}' supports NTLM, sending NTLM credentials instead");
+                    Trace.WriteLine($"'{targetUri}' supports NTLM, sending NTLM credentials instead");
 
                     return NtlmCredentials;
                 }
@@ -129,7 +129,7 @@ namespace Microsoft.Alm.Authentication
 
             if (_ntlmSupport != NtlmSupport.Always && _acquireCredentials != null)
             {
-                Git.Trace.WriteLine($"prompting user for credentials for '{targetUri}'.");
+                Trace.WriteLine($"prompting user for credentials for '{targetUri}'.");
 
                 credentials = _acquireCredentials(targetUri);
 

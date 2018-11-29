@@ -24,6 +24,7 @@
 **/
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -47,7 +48,7 @@ namespace Microsoft.Alm.Authentication
                     {
                         case NativeMethods.Win32Error.NotFound:
                         case NativeMethods.Win32Error.NoSuchLogonSession:
-                            Git.Trace.WriteLine($"credentials not found for '{targetName}'.");
+                            Trace.WriteLine($"credentials not found for '{targetName}'.");
                             break;
 
                         default:
@@ -56,7 +57,7 @@ namespace Microsoft.Alm.Authentication
                 }
                 else
                 {
-                    Git.Trace.WriteLine($"credentials for '{targetName}' deleted from store.");
+                    Trace.WriteLine($"credentials for '{targetName}' deleted from store.");
                 }
             }
             catch (Exception exception)
@@ -65,7 +66,7 @@ namespace Microsoft.Alm.Authentication
             }
         }
 
-        protected abstract string GetTargetName(TargetUri targetUri);
+        protected abstract IList<string> GetTargetNames(TargetUri targetUri);
 
         protected void PurgeCredentials(string @namespace)
         {
@@ -94,7 +95,7 @@ namespace Microsoft.Alm.Authentication
                         }
                         else
                         {
-                            Git.Trace.WriteLine($"credentials for '{@namespace}' purged from store.");
+                            Trace.WriteLine($"credentials for '{@namespace}' purged from store.");
                         }
                     }
                 }
@@ -131,7 +132,7 @@ namespace Microsoft.Alm.Authentication
 
                     credentials = new Credential(username, password);
 
-                    Git.Trace.WriteLine($"credentials for '{targetName}' read from store.");
+                    Trace.WriteLine($"credentials for '{targetName}' read from store.");
                 }
             }
             finally
@@ -167,7 +168,7 @@ namespace Microsoft.Alm.Authentication
                             Token.Deserialize(bytes, type, out token);
                         }
 
-                        Git.Trace.WriteLine($"token for '{targetName}' read from store.");
+                        Trace.WriteLine($"token for '{targetName}' read from store.");
                     }
                 }
             }
@@ -207,7 +208,7 @@ namespace Microsoft.Alm.Authentication
                     throw new Win32Exception(error, "Failed to write credentials");
                 }
 
-                Git.Trace.WriteLine($"credentials for '{targetName}' written to store.");
+                Trace.WriteLine($"credentials for '{targetName}' written to store.");
             }
             finally
             {
@@ -251,7 +252,7 @@ namespace Microsoft.Alm.Authentication
                             throw new Win32Exception(error, "Failed to write credentials");
                         }
 
-                        Git.Trace.WriteLine($"token for '{targetName}' written to store.");
+                        Trace.WriteLine($"token for '{targetName}' written to store.");
                     }
                     finally
                     {

@@ -321,7 +321,7 @@ namespace Atlassian.Bitbucket.Authentication.Test
             get { throw new NotImplementedException(); }
         }
 
-        public Secret.UriNameConversion UriNameConversion
+        public IList<Secret.UriNameConversion> UriNameConversions
         {
             get { throw new NotImplementedException(); }
         }

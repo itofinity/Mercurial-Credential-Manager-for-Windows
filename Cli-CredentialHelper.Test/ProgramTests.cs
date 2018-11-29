@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Atlassian.Bitbucket.Alm.Mercurial;
 
 namespace Microsoft.Alm.Cli.Test
 {
@@ -44,13 +45,13 @@ namespace Microsoft.Alm.Cli.Test
             {
                 { "HOME", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) }
             };
-            var gitconfig = new Git.Configuration.Impl();
+            var gitconfig = new Configuration.Impl();
             var targetUri = new Authentication.TargetUri("https://example.visualstudio.com/");
 
             Mock<OperationArguments> opargsMock = new Mock<OperationArguments>();
             opargsMock.Setup(r => r.EnvironmentVariables)
                       .Returns(envvars);
-            opargsMock.Setup(r => r.GitConfiguration)
+            opargsMock.Setup(r => r.MercurialConfiguration)
                       .Returns(gitconfig);
             opargsMock.Setup(r => r.LoadConfiguration());
             opargsMock.Setup(r => r.TargetUri)
@@ -75,13 +76,13 @@ namespace Microsoft.Alm.Cli.Test
                 { "HOME", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) },
                 { Program.EnvironPreserveCredentialsKey, "no" },
             };
-            var gitconfig = new Git.Configuration.Impl();
+            var gitconfig = new Configuration.Impl();
             var targetUri = new Authentication.TargetUri("https://example.visualstudio.com/");
 
             Mock<OperationArguments> opargsMock = new Mock<OperationArguments>();
             opargsMock.Setup(r => r.EnvironmentVariables)
                       .Returns(envvars);
-            opargsMock.Setup(r => r.GitConfiguration)
+            opargsMock.Setup(r => r.MercurialConfiguration)
                       .Returns(gitconfig);
             opargsMock.Setup(r => r.LoadConfiguration());
             opargsMock.Setup(r => r.TargetUri)

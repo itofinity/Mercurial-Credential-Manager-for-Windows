@@ -74,7 +74,7 @@ namespace Microsoft.Alm.Authentication
                 }
                 catch (Exception exception)
                 {
-                    Git.Trace.WriteLine("error testing targetUri for NTML: " + exception.Message);
+                    Trace.WriteLine("error testing targetUri for NTML: " + exception.Message);
                 }
             }
 

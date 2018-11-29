@@ -8,9 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Alm.Authentication;
 using Microsoft.Win32.SafeHandles;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Linq.Expressions;
-using Atlassian.Bitbucket.Alm.Mercurial;
 using System.Linq;
 using System.Net;
 
@@ -315,7 +312,7 @@ namespace Microsoft.Alm.Cli
             else
             {
                 // check the git-config http.proxy setting just-in-case
-                Configuration.Entry entry;
+                Atlassian.Bitbucket.Alm.Mercurial.Configuration.Entry entry;
                 if (operationArguments.MercurialConfiguration.TryGetEntry("http", operationArguments.QueryUri, "proxy", out entry)
                     && !String.IsNullOrWhiteSpace(entry.Value))
                 {
@@ -1084,7 +1081,7 @@ namespace Microsoft.Alm.Cli
             var config = operationArguments.MercurialConfiguration;
 
             // look for an entry in the git config
-            Configuration.Entry entry;
+            Atlassian.Bitbucket.Alm.Mercurial.Configuration.Entry entry;
             if (!String.IsNullOrWhiteSpace(configKey)
                 && config.TryGetEntry(ConfigPrefix, operationArguments.QueryUri, configKey, out entry))
             {
@@ -1145,7 +1142,7 @@ namespace Microsoft.Alm.Cli
             var config = operationArguments.MercurialConfiguration;
 
             // look for an entry in the git config
-            Configuration.Entry entry;
+            Atlassian.Bitbucket.Alm.Mercurial.Configuration.Entry entry;
             if (!String.IsNullOrWhiteSpace(configKey)
                 && config.TryGetEntry(ConfigPrefix, operationArguments.QueryUri, configKey, out entry)
                 && !String.IsNullOrWhiteSpace(entry.Value))
